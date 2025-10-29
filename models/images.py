@@ -20,9 +20,13 @@ class Image(ImageBase, table=True):
 
 #Read Image
 class ImageRead(ImageBase):
-    pass
+    Img_ID : int
+    Product_ID : int
+    IsCover : bool
+    Img_Src : str
 
 #Upload Image
 class ImageUpload(ImageBase):
     Iscover : bool
     Img_Src : int
+    Product_ID : int
