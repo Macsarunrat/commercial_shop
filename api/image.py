@@ -21,9 +21,7 @@ router = APIRouter(
 def read_image(session: SessionDep):
     return crud_images.read_images(session)
 
-#get image depend on shop
-# @router.get("/{shop_id}/images")
-# def get_image_by_shop(session:SessionDep,shop_id: int)
+
 
 #get image depend on order
 

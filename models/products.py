@@ -1,7 +1,8 @@
 from __future__ import annotations
 from sqlmodel import Field, SQLModel, Relationship, table
 from typing import Optional, TYPE_CHECKING, List
-from sqlalchemy.orm import Mapped, relationship  # Add these imports
+from sqlalchemy.orm import Mapped, relationship
+from pydantic import ConfigDict
 
 if TYPE_CHECKING:
     from .catagory import Catagory
@@ -16,6 +17,7 @@ class ProductBase(SQLModel):
 
 # Product table
 class Products(ProductBase, table=True):
+    model_config = ConfigDict(from_attributes=True)
     __tablename__ = "products"
     Product_ID : Optional[int] = Field(primary_key=True,default=None)
     catagory: Mapped[Optional["Catagory"]] = Relationship(sa_relationship=relationship(back_populates="products"))
