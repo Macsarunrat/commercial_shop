@@ -4,6 +4,9 @@ from models.catagory import Catagory
 from models.products import Products
 from models.images import Image
 from models.brand import Brand
+from models.order import Order
+from models.paidtype import PaidType
+from models.orderitems import OrderItems
 import os
 
 load_dotenv()
