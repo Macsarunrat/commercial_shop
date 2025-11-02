@@ -52,3 +52,4 @@ def create_non_cover_image(db: Session, product_id: int, img_srcs: List[str]) ->
     for img in new_images:
         db.refresh(img)
     return new_images
+

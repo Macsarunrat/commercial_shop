@@ -19,7 +19,7 @@ class OrderBase(SQLModel):
     Paid_Status : str = Field(max_length=100,min_length=1)
     Total_Weight : Decimal = Field(sa_column=DECIMAL(5,2))
     Ship_Cost: Decimal = Field(sa_column=Column(DECIMAL(10,2)))
-
+    
 #Create table
 class Order(OrderBase, table=True):
     __tablename__ = "orders"
@@ -28,4 +28,5 @@ class Order(OrderBase, table=True):
     Paid_Type_ID : int = Field(foreign_key = "paidtype.Paid_Type_ID")
     paidtype : Mapped[Optional["PaidType"]] = Relationship(sa_relationship= relationship(back_populates= "order"))
     orderitems : Mapped[List["OrderItems"]] = Relationship(sa_relationship= relationship(back_populates="order"))
+    
 
