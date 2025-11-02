@@ -7,6 +7,10 @@ import Shop from "./component/Shop.jsx";
 
 import Register from "./userlogin/Register.jsx";
 import Login from "./userlogin/Login.jsx";
+import Cart from "./cart/Cart.jsx";
+import AllCategories from "./categorylayout/AllCategories.jsx";
+import MoreAllCategories from "./categorylayout/MoreAllCategories.jsx";
+import Banner from "./nav/component/Bannner.jsx";
 
 const router = createBrowserRouter([
   {
@@ -14,7 +18,7 @@ const router = createBrowserRouter([
     element: <Nav />,
     children: [
       {
-        path: "home",
+        path: "/",
         element: <Home />,
       },
       {
@@ -34,6 +38,18 @@ const router = createBrowserRouter([
   {
     path: "login",
     element: <Login />,
+  },
+  {
+    path: "cart",
+    element: <Cart />,
+  },
+  {
+    path: "2columncategories",
+    element: <AllCategories />,
+  },
+  {
+    path: "5columncategories",
+    element: <MoreAllCategories />,
   },
 ]);
 

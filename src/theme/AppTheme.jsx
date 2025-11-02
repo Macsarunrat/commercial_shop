@@ -6,7 +6,7 @@ import "@fontsource-variable/inter";
 // สร้างธีมที่ต้องการ
 const theme = createTheme({
   palette: {
-    primary: { main: "#fe2525ff" }, // ฟ้า
+    primary: { main: "#d62828" }, // ฟ้า
     secondary: { main: "#22c55e" }, // เขียว
     background: {
       default: "#f5f5f5",
@@ -18,6 +18,8 @@ const theme = createTheme({
   },
   shape: {
     borderRadius: 12,
+    MuiButton: { styleOverrides: { root: { borderRadius: 0 } } },
+    MuiToggleButton: { styleOverrides: { root: { borderRadius: 0 } } },
   },
 });
 

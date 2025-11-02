@@ -11,7 +11,6 @@ import {
   MenuItem,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import StoreIcon from "@mui/icons-material/Store";
 import { Link } from "react-router-dom";
 import AppTheme from "../../theme/AppTheme";
 

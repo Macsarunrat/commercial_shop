@@ -1,7 +1,13 @@
 import React from "react";
+import Bar from "../nav/component/Bar";
+import Banner from "../nav/component/Bannner";
 
 const Cart = () => {
-  return <div>Cart</div>;
+  return (
+    <div>
+      <Banner />
+    </div>
+  );
 };
 
 export default Cart;

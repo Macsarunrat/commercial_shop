@@ -1,10 +1,15 @@
 import React from "react";
+import BarHome from "../homelayout/BarHome";
+import NewProductHome from "../homelayout/NewProductHome";
+import CategoryHome from "../categorylayout/CategoryHome";
 
 const Home = () => {
   return (
-    <>
-      <h1>Home</h1>
-    </>
+    <div className="">
+      <BarHome />
+      <NewProductHome />
+      <CategoryHome />
+    </div>
   );
 };
 
