@@ -7,22 +7,22 @@ if TYPE_CHECKING:
     from .products import Products
 
 #Catagory BaseModel
-class CatagoryBase(SQLModel):
+class CategoryBase(SQLModel):
     Catagory_Name : str = Field(index=True,max_length=100,min_length=1)
     
 #Catagory Model
-class Catagory(CatagoryBase, table= True):
+class Category(CategoryBase, table= True):
     __tablename__ = "catagory"
     Catagory_ID : Optional[int] = Field(primary_key=True,default=None)
-    products : Mapped[List["Products"]]= Relationship(sa_relationship=relationship(back_populates="catagory"))  # Fixed typo: was "catagor"
+    products : Mapped[List["Products"]]= Relationship(sa_relationship=relationship(back_populates="category"))  # Fixed typo: was "catagor"
 
 
 #Create New Catagory
-class Create_New_Catagory(CatagoryBase):
+class Create_New_Category(CategoryBase):
     Catagory_Name : str
 
 #Get All Catagory
-class Get_All_Catagory(CatagoryBase):
+class Get_All_Category(CategoryBase):
     Catagory_ID : int
     Catagory_Name : str
     
