@@ -26,3 +26,6 @@ class Get_All_Brand(BrandBase):
 #Create New Brand
 class BrandCreate(BrandBase):
     pass
+
+class BrandRead(BrandBase):
+    Brand_ID: int

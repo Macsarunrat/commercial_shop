@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 class ImageBase(SQLModel):
     IsCover : bool
     Img_Src : str = Field(max_length=200)
+    Product_ID: int = Field(foreign_key="products.Product_ID")
 
 #Image model
 class Image(ImageBase, table=True):
@@ -30,3 +31,6 @@ class ImageUpload(ImageBase):
     Iscover : bool
     Img_Src : int
     Product_ID : int
+
+class ImageRead(ImageBase):
+    Img_ID: int

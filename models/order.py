@@ -1,3 +1,4 @@
+from __future__ import annotations
 from sqlmodel import SQLModel, Field, table , Relationship
 from datetime import datetime, timezone , timedelta
 from typing import Optional,List, TYPE_CHECKING
@@ -8,6 +9,8 @@ from decimal import Decimal
 if TYPE_CHECKING:
     from .paidtype import PaidType
     from .orderitems import OrderItems
+    from .user import User
+    from .shoporders import ShopOrders
 
 
 THAI_TZ = timezone(timedelta(hours=7))
@@ -19,6 +22,9 @@ class OrderBase(SQLModel):
     Paid_Status : str = Field(max_length=100,min_length=1)
     Total_Weight : Decimal = Field(sa_column=DECIMAL(5,2))
     Ship_Cost: Decimal = Field(sa_column=Column(DECIMAL(10,2)))
+
+    User_ID: int = Field(foreign_key="users.User_ID")
+    Paid_Type_ID: int = Field(foreign_key="paidtype.Paid_Type_ID")
     
 #Create table
 class Order(OrderBase, table=True):
@@ -28,5 +34,11 @@ class Order(OrderBase, table=True):
     Paid_Type_ID : int = Field(foreign_key = "paidtype.Paid_Type_ID")
     paidtype : Mapped[Optional["PaidType"]] = Relationship(sa_relationship= relationship(back_populates= "order"))
     orderitems : Mapped[List["OrderItems"]] = Relationship(sa_relationship= relationship(back_populates="order"))
-    
+    user: Mapped["User"] = Relationship(sa_relationship=relationship(back_populates="orders"))
+    shoporders: Mapped[List["Shop_Orders"]] = Relationship(sa_relationship=relationship(back_populates="order"))
 
+class OrderRead(OrderBase):
+    Order_ID: int
+
+class OrderCreate(OrderBase):
+    pass
