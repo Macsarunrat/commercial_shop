@@ -8,6 +8,8 @@ from models.products import Products
 from models.images import Image
 from models.sell import ItemPublic
 from models.shop import Shop, ShopPublicCard # <--- Import Schema ใหม่จาก models.sell
+from models.brand import Brand, BrandRead # 👈 1. เพิ่ม Brand, BrandRead
+from sqlalchemy import distinct # 👈 2. เพิ่ม distinct
 
 def _map_to_public(sell_item: Sell) -> ItemPublic:
     """Helper function ช่วยแปลงข้อมูล Sell -> ItemPublic"""
@@ -152,3 +154,28 @@ def get_all_shops_public(db: Session) -> List[ShopPublicCard]:
         )
         
     return shop_cards
+
+def get_brands_by_category(db: Session, category_id: int) -> List[BrandRead]:
+    """
+    (API ใหม่) ดึง "แบรนด์" ทั้งหมด ที่มีสินค้า "วางขาย"
+    อยู่ใน "หมวดหมู่" (Category) ที่กำหนด
+    """
+    
+    # SQL: SELECT DISTINCT T3.*
+    #      FROM Sell T1
+    #      JOIN Products T2 ON T1.Product_ID = T2.Product_ID
+    #      JOIN Brand T3 ON T2.Brand_ID = T3.Brand_ID
+    #      WHERE T2.Category_ID = {category_id}
+    
+    statement = (
+        select(Brand) # 👈 (T3)
+        .join(Products, Brand.Brand_ID == Products.Brand_ID) # 👈 (Join T3 -> T2)
+        .join(Sell, Products.Product_ID == Sell.Product_ID) # 👈 (Join T2 -> T1)
+        .where(Products.Category_ID == category_id) # 👈 (Where)
+        .distinct() # 👈 (เอาแค่ชื่อแบรนด์ที่ไม่ซ้ำ)
+    )
+    
+    brands = db.exec(statement).all()
+    
+    # แปลงเป็น Schema BrandRead (ที่มี ID และ Name)
+    return [BrandRead.model_validate(b) for b in brands]

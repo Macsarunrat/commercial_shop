@@ -5,6 +5,7 @@ from database import get_session
 import crud.public_store as crud_public
 from models.sell import ItemPublic
 from models.shop import ShopPublicCard # <--- Import Schema ใหม่จาก models.sell
+from models.brand import BrandRead # 👈 1. เพิ่ม BrandRead
 
 router = APIRouter(
     prefix="/store", # ใช้ prefix ใหม่สำหรับหน้าร้าน
@@ -76,3 +77,14 @@ def get_all_shops_for_ui(session: SessionDep):
     # (โค้ดนี้ทำงานได้เลย ไม่ต้องแก้)
     shops = crud_public.get_all_shops_public(session) 
     return shops
+
+@router.get("/brands-by-category/{category_id}", response_model=List[BrandRead])
+def get_brands_for_category(session: SessionDep, category_id: int):
+    """
+    API: (ใหม่) ดึงแบรนด์ทั้งหมดที่เกี่ยวข้องกับ Category ID
+    (สำหรับทำปุ่ม Toggle Filter)
+    """
+    brands = crud_public.get_brands_by_category(session, category_id)
+    if not brands:
+        raise HTTPException(status_code=404, detail="No brands found for this category or category does not exist")
+    return brands
