@@ -1,16 +1,21 @@
 import React from "react";
 import Nav from "./nav/Nav";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import Category from "./component/Category.jsx";
+import OpenStore from "./component/OpenStore.jsx";
 import Home from "./component/Home.jsx";
 import Shop from "./component/Shop.jsx";
 
-import Register from "./userlogin/Register.jsx";
 import Login from "./userlogin/Login.jsx";
 import Cart from "./cart/Cart.jsx";
-import AllCategories from "./categorylayout/AllCategories.jsx";
+
+import AllCategories2 from "./categorylayout/AllCategories2.jsx";
 import MoreAllCategories from "./categorylayout/MoreAllCategories.jsx";
-import Banner from "./nav/component/Bannner.jsx";
+import CategoryShopId from "./categorylayout/CategoryShopId.jsx";
+import MainShopUI from "./shopui/MainShopUI.jsx";
+import AllShopUI from "./shopui/AllShopUI.jsx";
+import ShopIcon from "./shopui/ShopIcon.jsx";
+import RegisterMain from "./userlogin/RegisterMain.jsx";
+import Ordered from "./component/Ordered.jsx";
 
 const router = createBrowserRouter([
   {
@@ -22,18 +27,34 @@ const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: "category",
-        element: <Category />,
+        path: "openstore",
+        element: <OpenStore />,
+      },
+      {
+        path: "categoryitems/:id",
+        element: <CategoryShopId />,
       },
       {
         path: "shop",
         element: <Shop />,
       },
+      {
+        path: "mainshop/:categoryId",
+        element: <MainShopUI />,
+      },
+      {
+        path: "allshop",
+        element: <AllShopUI />,
+      },
+      {
+        path: "ordered",
+        element: <Ordered />,
+      },
     ],
   },
   {
     path: "register",
-    element: <Register />,
+    element: <RegisterMain />,
   },
   {
     path: "login",
@@ -44,12 +65,16 @@ const router = createBrowserRouter([
     element: <Cart />,
   },
   {
-    path: "2columncategories",
-    element: <AllCategories />,
+    path: "columncategories",
+    element: <AllCategories2 />,
   },
   {
     path: "5columncategories",
     element: <MoreAllCategories />,
+  },
+  {
+    path: "shopicon",
+    element: <ShopIcon />,
   },
 ]);
 

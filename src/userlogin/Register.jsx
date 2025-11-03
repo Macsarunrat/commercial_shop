@@ -24,7 +24,7 @@ export default function Register() {
             p: "2rem",
             maxWidth: 600,
             m: "auto",
-            mt: "15vh",
+            // mt: "15vh",
             border: "1px solid #eee",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
             borderRadius: 3,

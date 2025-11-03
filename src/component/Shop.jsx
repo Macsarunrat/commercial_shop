@@ -1,10 +1,11 @@
 import React from "react";
-import CategoryShopId from "../categorylayout/CategoryShopId";
+import CategoryById from "../categorylayout/CategoryById";
+import AllShopUI from "../shopui/AllShopUI";
 
 const Shop = () => {
   return (
     <>
-      <CategoryShopId />
+      <AllShopUI />
     </>
   );
 };

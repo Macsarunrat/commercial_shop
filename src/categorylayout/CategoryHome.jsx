@@ -12,14 +12,7 @@ import {
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import AppTheme from "../theme/AppTheme";
-import AllCategories from "../categorylayout/AllCategories";
-
-// mock ข้อมูลหมวด
-const CATEGORIES = Array.from({ length: 24 }).map((_, i) => ({
-  id: i + 1,
-  name: `Category ${i + 1}`,
-  image: "/placeholder.png", // ใส่รูปจริงทีหลัง
-}));
+import AllCategories2 from "../categorylayout/AllCategories2";
 
 export default function CategoryHome() {
   const ref = React.useRef(null);
@@ -73,8 +66,8 @@ export default function CategoryHome() {
 
         {/* แท่นเลื่อนแนวนอน: grid 2 แถว, ไหลเป็นคอลัมน์ */}
         <Box sx={{ mx: -2, mb: -2 }}>
-          {/* แสดง 2 แถว, เลื่อนซ้าย/ขวาได้, มี scrollbar */}
-          <AllCategories />
+          {/* แสดง 2 แถว, เลื่อนซ้าย/ขวาได้*/}
+          <AllCategories2 />
         </Box>
       </Box>
     </AppTheme>

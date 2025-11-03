@@ -15,9 +15,9 @@ import { Link } from "react-router-dom";
 import AppTheme from "../../theme/AppTheme";
 
 const Navpages = [
-  { label: "Category", to: "/category", index: "1" },
+  { label: "OpenStore", to: "/openstore", index: "1" },
   { label: "Shop", to: "/shop", index: "2" },
-  { label: "Ordered", to: "/category", index: "3" },
+  { label: "Ordered", to: "/ordered", index: "3" },
   { label: "Help", to: "/home", index: "4" },
 ];
 
