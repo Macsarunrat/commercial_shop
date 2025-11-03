@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, relationship
 if TYPE_CHECKING:
     from .user import User
     from .sell import Sell
-    from .shop_orders import Shop_Orders
+    from .shoporders import Shop_Orders
     from .shop_address import Shop_Address
 
 class ShopBase(SQLModel):

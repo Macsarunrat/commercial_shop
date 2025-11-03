@@ -5,7 +5,7 @@ from sqlalchemy import Column, DateTime
 from decimal import Decimal
 
 if TYPE_CHECKING:
-    from .orders import Orders
+    from .order import Orders
     from .sell import Sell
 
 #Create Base Class 
