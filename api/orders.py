@@ -3,7 +3,7 @@ from sqlmodel import Session
 from typing import Annotated, List
 from database import get_session
 import crud.orders as crud_orders
-from models.order import OrderSummary, OrderDetailsPublic, OrderCheckoutRequest # Import 2 schemas
+from models.order import OrderSummary, OrderDetailsPublic, OrderCheckoutRequest, OrderRead
 
 router = APIRouter(
     prefix="/orders",
