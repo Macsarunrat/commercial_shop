@@ -7,13 +7,13 @@ from .shop_address import ShopAddressRead
 if TYPE_CHECKING:
     from .user import User
     from .sell import Sell
-    from .shop_orders import Shop_Orders
+    from .shoporders import Shop_Orders
     from .shop_address import Shop_Address
 
 class ShopBase(SQLModel):
     Shop_Name: str = Field(max_length=100, index=True)
     Shop_Phone: Optional[str] = Field(default=None, max_length=20)
-    User_ID: int = Field(foreign_key="users.User_ID") # เจ้าของร้าน
+    User_ID: int = Field(foreign_key="users.User_ID",unique=True) # เจ้าของร้าน
 
 class Shop(ShopBase, table=True):
     __tablename__ = "shop"

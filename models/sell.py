@@ -52,6 +52,3 @@ class SellItemCreate(SQLModel):
     Price: Decimal
     Stock: int
 
-class SellReadWithProduct(SellRead):
-    # โมเดลสำหรับ return ข้อมูลกลับไป (เผื่ออยากให้เห็น product_id ที่สร้าง)
-    Product_ID: int

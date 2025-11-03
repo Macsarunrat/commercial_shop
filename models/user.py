@@ -13,7 +13,7 @@ class UserBase(SQLModel):
     Username: str = Field(index=True, unique=True, max_length=100)
     Name: str = Field(max_length=100)
     Email: str = Field(unique=True, index=True, max_length=100)
-    Photo: Optional[str] = Field(default=None, max_length=255)
+    #Photo: Optional[str] = Field(default=None, max_length=255)
 
 class User(UserBase, table=True):
     __tablename__ = "users"

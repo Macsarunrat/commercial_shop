@@ -10,15 +10,28 @@ def create_shop(db: Session, shop_data: ShopCreate) -> Shop:
     """
     สร้างร้านค้าใหม่ (Shop) - (ยังไม่มีที่อยู่)
     """
+    # 1. ตรวจสอบว่า User ที่ส่งมา มีตัวตนจริง
     user = db.get(User, shop_data.User_ID)
     if not user:
         raise ValueError(f"User with ID {shop_data.User_ID} not found")
         
+    # 2. สร้าง object แต่ยังไม่ commit
     new_shop = Shop.model_validate(shop_data)
     db.add(new_shop)
-    db.commit()
-    db.refresh(new_shop)
-    return new_shop
+    
+    try:
+        # 3. พยายาม commit
+        db.commit() # ⭐️ ถ้า User_ID ซ้ำ, Error จะเกิดที่นี่
+        db.refresh(new_shop)
+        return new_shop
+    except IntegrityError:
+        # 4. ถ้าเกิด Error (เช่น unique ซ้ำ) ให้ rollback
+        db.rollback()
+        # ⭐️ ส่ง Error นี้กลับไปให้ API layer
+        raise ValueError(f"User {shop_data.User_ID} already owns a shop")
+    except Exception as e:
+        db.rollback()
+        raise e
 
 def get_shop(db: Session, shop_id: int) -> Shop | None:
     """

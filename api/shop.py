@@ -4,7 +4,7 @@ from sqlmodel import Session
 from typing import Annotated
 from database import get_session
 import crud.shop as crud_shop
-from models.sell import Sell, SellCreate,SellItemCreate,SellReadWithProduct
+from models.sell import Sell, SellCreate,SellItemCreate,SellRead
 
 from models.shop import ShopCreate, ShopRead, ShopReadWithAddress 
 
@@ -24,10 +24,23 @@ def create_new_shop(session: SessionDep, shop_data: ShopCreate):
     try:
         shop = crud_shop.create_shop(session, shop_data)
         return shop
+    
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) # User not found
+        error_msg = str(e)
+        
+        # ⭐️ แยกแยะ Error เพื่อส่ง HTTP Status Code ที่ถูกต้อง
+        if "not found" in error_msg:
+            # ถ้า User ไม่มีตัวตน
+            raise HTTPException(status_code=404, detail=error_msg)
+        elif "already owns a shop" in error_msg:
+            # ถ้า User มีร้านค้าอยู่แล้ว (Error จาก IntegrityError)
+            raise HTTPException(status_code=409, detail=error_msg) # 409 Conflict
+        else:
+            raise HTTPException(status_code=400, detail=error_msg)
+            
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) # กัน Error (เช่น Shop_Name ซ้ำ)
+        # ดัก Error อื่นๆ ที่ไม่คาดคิด
+        raise HTTPException(status_code=400, detail=f"An unexpected error: {str(e)}")
 
 @router.get("/{shop_id}", response_model=ShopReadWithAddress)
 def read_shop(session: SessionDep, shop_id: int):
@@ -39,7 +52,7 @@ def read_shop(session: SessionDep, shop_id: int):
         raise HTTPException(status_code=404, detail="Shop not found")
     return shop
 
-@router.post("/{shop_id}/items", response_model=SellReadWithProduct)
+@router.post("/{shop_id}/items", response_model=SellRead)
 def create_shop_item(
     shop_id: int, 
     item_data: SellItemCreate, 
