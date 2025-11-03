@@ -16,3 +16,7 @@ class Settings(BaseSettings):
     DB_NAME: str
 
 settings = Settings()
+
+print("="*50)
+print(f"LOADING SETTINGS: ACCESS_TOKEN_EXPIRE_MINUTES = {settings.ACCESS_TOKEN_EXPIRE_MINUTES}")
+print("="*50)
