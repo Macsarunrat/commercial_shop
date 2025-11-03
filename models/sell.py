@@ -41,3 +41,17 @@ class ItemPublic(SQLModel):
     Stock: int
     Shop_ID: int
     Cover_Image: Optional[str] = None
+
+class SellItemCreate(SQLModel):
+    # ข้อมูลสำหรับค้นหา หรือ สร้าง Product
+    Product_Name: str
+    Category_ID: int
+    Brand_ID: int
+    
+    # ข้อมูลสำหรับสร้าง Sell
+    Price: Decimal
+    Stock: int
+
+class SellReadWithProduct(SellRead):
+    # โมเดลสำหรับ return ข้อมูลกลับไป (เผื่ออยากให้เห็น product_id ที่สร้าง)
+    Product_ID: int
