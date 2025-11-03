@@ -8,6 +8,7 @@ from models.user import User, UserCreate, UserRead, Token  # <-- เพิ่ม
 from security import get_current_user  # <-- Import สำหรับ protected
 from datetime import timedelta
 from config import settings
+from pydantic import BaseModel
 
 router = APIRouter(
     prefix="/users",
@@ -64,3 +65,20 @@ def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+class LogoutResponse(BaseModel):
+    detail: str
+
+@router.post("/logout", response_model=LogoutResponse)
+def logout(
+    current_user: Annotated[User, Depends(get_current_user)] 
+):
+    """
+    API: ล็อกเอาต์ (Log out)
+    (ในระบบ JWT, Server แค่ยืนยันว่ารับทราบการ Logout)
+    (การ Logout จริงๆ เกิดขึ้นที่ Client โดยการลบ Token)
+    """
+    
+    # ⭐️ Server ไม่ต้องทำอะไรเลย เพราะ Token อยู่ที่ Client ⭐️
+    # เราแค่ต้องพึ่งพา 'get_current_user' เพื่อเช็คว่า Token ที่ส่งมายังไม่หมดอายุ
+    
+    return {"detail": "Logged out successfully"}
