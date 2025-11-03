@@ -2,6 +2,8 @@ from __future__ import annotations
 from sqlmodel import SQLModel, Field, Relationship, table
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
+
+from models.shop_image import ShopImageRead
 from .shop_address import ShopAddressRead
 
 if TYPE_CHECKING:
@@ -9,6 +11,7 @@ if TYPE_CHECKING:
     from .sell import Sell
     from .shoporders import Shop_Orders
     from .shop_address import Shop_Address
+    from .shop_image import ShopImage
 
 class ShopBase(SQLModel):
     Shop_Name: str = Field(max_length=100, index=True)
@@ -19,6 +22,9 @@ class Shop(ShopBase, table=True):
     __tablename__ = "shop"
     Shop_ID: Optional[int] = Field(primary_key=True, default=None)
     User_ID: int = Field(foreign_key="users.User_ID",unique=True) # เจ้าของร้าน
+    cover_image: Mapped[Optional["ShopImage"]] = Relationship(
+        sa_relationship=relationship(back_populates="shop", cascade="all, delete-orphan")
+    )
     
     # Relationships
     user: Mapped["User"] = Relationship(sa_relationship=relationship(back_populates="shops"))
@@ -26,18 +32,11 @@ class Shop(ShopBase, table=True):
     items_for_sale: Mapped[List["Sell"]] = Relationship(sa_relationship=relationship(back_populates="shop"))
     shop_orders: Mapped[List["Shop_Orders"]] = Relationship(sa_relationship=relationship(back_populates="shop"))
 
-# class ShopRead(ShopBase):
-#     Shop_ID: int
-
-# class ShopCreate(ShopBase):
-#     pass
-
-
-
 # Model สำหรับ Response (มี User_ID)
 class ShopRead(ShopBase):
     Shop_ID: int
     User_ID: int
+    cover_image: Optional[ShopImageRead] = None
     # ... (อาจจะมี address ฯลฯ)
 
 # Model ที่ CRUD ใช้ (มี User_ID)

@@ -14,6 +14,7 @@ from models.shop_address import Shop_Address
 from models.sell import Sell
 from models.cart import Cart
 from models.shoporders import Shop_Orders
+from models.shop_image import ShopImage
 import os
 
 load_dotenv()
