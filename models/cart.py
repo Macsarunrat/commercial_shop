@@ -28,3 +28,11 @@ class CartRead(CartBase):
 class CartItemPublic(SQLModel):
     Quantity: int
     ItemDetails: ItemPublic
+
+class CartAdd(SQLModel):
+    User_ID: int
+    Sell_ID: int
+    Quantity: int = 1
+
+class CartUpdate(SQLModel):
+    Quantity: int

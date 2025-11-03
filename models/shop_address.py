@@ -29,3 +29,12 @@ class ShopAddressRead(ShopAddressBase):
 
 class ShopAddressCreate(ShopAddressBase):
     pass
+
+class ShopAddressForm(SQLModel):
+    Province: Optional[str] = Field(default=None, max_length=100)
+    Amphur: Optional[str] = Field(default=None, max_length=100)
+    Tumbon: Optional[str] = Field(default=None, max_length=100)
+    Soi: Optional[str] = Field(default=None, max_length=100)
+    Road: Optional[str] = Field(default=None, max_length=100)
+    Optional_Detail: Optional[str] = Field(default=None, max_length=255)
+    Address_Number: Optional[str] = Field(default=None, max_length=50)

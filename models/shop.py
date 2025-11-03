@@ -2,6 +2,7 @@ from __future__ import annotations
 from sqlmodel import SQLModel, Field, Relationship, table
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
+from .shop_address import ShopAddressRead
 
 if TYPE_CHECKING:
     from .user import User
@@ -29,3 +30,6 @@ class ShopRead(ShopBase):
 
 class ShopCreate(ShopBase):
     pass
+
+class ShopReadWithAddress(ShopRead):
+    address: Optional[ShopAddressRead] = None
