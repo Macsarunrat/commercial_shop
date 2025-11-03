@@ -7,6 +7,15 @@ from models.brand import Brand
 from models.order import Order
 from models.paidtype import PaidType
 from models.orderitems import OrderItems
+from models.user import User
+from models.sell import Sell
+from models.shop import Shop
+from models.useraddress import UserAddress
+from models.shopaddress import ShopAddress
+from models.shoporder import ShopOrder
+from models.cart import Cart
+
+
 import os
 
 load_dotenv()

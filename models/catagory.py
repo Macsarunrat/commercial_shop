@@ -14,7 +14,7 @@ class CatagoryBase(SQLModel):
 class Catagory(CatagoryBase, table= True):
     __tablename__ = "catagory"
     Catagory_ID : Optional[int] = Field(primary_key=True,default=None)
-    products : Mapped[List["Products"]]= Relationship(sa_relationship=relationship(back_populates="catagory"))  # Fixed typo: was "catagor"
+    products : List["Products"]= Relationship(sa_relationship=relationship(back_populates="catagory"))  # Fixed typo: was "catagor"
 
 
 #Create New Catagory

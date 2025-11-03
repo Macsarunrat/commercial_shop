@@ -1,3 +1,4 @@
+from __future__ import annotations
 from sqlmodel import SQLModel,Field, table, Relationship
 from typing import Optional, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
@@ -14,7 +15,7 @@ class PaidTypeBase(SQLModel):
 class PaidType(PaidTypeBase, table= True):
     __tablename__ = "paidtype"
     Paid_Type_ID : Optional[int] | None = Field(primary_key=True,default=None)
-    order : Mapped[Optional["Order"]] = Relationship(sa_relationship= relationship(back_populates="paidtype"))
+    order : Optional["Order"] = Relationship(sa_relationship= relationship(back_populates="paidtype"))
 
 
 #Read all type

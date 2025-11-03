@@ -16,7 +16,7 @@ class Image(ImageBase, table=True):
     __tablename__ = "images"
     Img_ID : Optional[int] = Field(primary_key=True)
     Product_ID : Optional[int] = Field(foreign_key="products.Product_ID")
-    products : Mapped[Optional["Products"]]= Relationship(sa_relationship=relationship(back_populates= "images"))
+    products : Optional["Products"]= Relationship(sa_relationship=relationship(back_populates= "images"))
 
 #Read Image
 class ImageRead(ImageBase):

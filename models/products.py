@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .catagory import Catagory
     from .images import Image
     from .brand import Brand
+    from .sell import Sell
 
 # Product BaseModel
 class ProductBase(SQLModel):
@@ -20,9 +21,10 @@ class Products(ProductBase, table=True):
     model_config = ConfigDict(from_attributes=True)
     __tablename__ = "products"
     Product_ID : Optional[int] = Field(primary_key=True,default=None)
-    catagory: Mapped[Optional["Catagory"]] = Relationship(sa_relationship=relationship(back_populates="products"))
-    images: Mapped[List["Image"]] = Relationship(sa_relationship=relationship(back_populates="products"))
-    brand : Mapped[Optional["Brand"]] = Relationship(sa_relationship = relationship(back_populates = "products"))
+    catagory: Optional["Catagory"] = Relationship(sa_relationship=relationship(back_populates="products"))
+    images: List["Image"] = Relationship(sa_relationship=relationship(back_populates="products"))
+    brand : Optional["Brand"] = Relationship(sa_relationship = relationship(back_populates = "products"))
+    sell : List["Sell"] = Relationship(sa_relationship=relationship(back_populates="products"))
 
 #Get all product
 class AllProduct(ProductBase):

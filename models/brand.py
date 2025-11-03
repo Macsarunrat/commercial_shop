@@ -1,6 +1,7 @@
+from __future__ import annotations
 from sqlmodel import SQLModel,Field, Relationship,table
 from typing import List,TYPE_CHECKING
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import relationship
 
 if TYPE_CHECKING:
     from .products import Products
@@ -15,7 +16,7 @@ class BrandBase(SQLModel):
 class Brand(BrandBase, table = True):
     __tablename__ = "brand"
     Brand_ID : int = Field(primary_key= True, default=None)
-    products : Mapped[List["Products"]] = Relationship(sa_relationship=relationship(back_populates="brand"))
+    products : List["Products"] = Relationship(sa_relationship=relationship(back_populates="brand"))
 
 
 #Get All Brand
