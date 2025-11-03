@@ -13,6 +13,9 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import StoreIcon from "@mui/icons-material/Store";
 import { Link, useLocation, matchPath } from "react-router-dom";
 import AppTheme from "../../theme/AppTheme";
+import Badge from "@mui/material/Badge";
+import { useCartStore } from "../../stores/cartStore";
+import { useNavigate } from "react-router-dom";
 
 const Search = styled("form")(({ theme }) => ({
   backgroundColor: alpha(theme.palette.primary.contrastText, 0.15),
@@ -52,10 +55,14 @@ const SearchButton = styled(IconButton)(({ theme }) => ({
 
 export default function SearchAppBar() {
   const [q, setQ] = React.useState("");
+  const cartCount = useCartStore((s) => s.cartCount());
+  const navigate = useNavigate();
 
   const onSearch = (e) => {
     e?.preventDefault();
     console.log("search:", q);
+    const qs = new URLSearchParams({ q }).toString();
+    +navigate(`/search?${qs}`);
   };
 
   // --- เช็ค path ปัจจุบัน ---
@@ -122,7 +129,15 @@ export default function SearchAppBar() {
                   ml: { xs: 2, md: 5, lg: 18 },
                 }}
               >
-                <ShoppingCartIcon sx={{ fontSize: 38 }} />
+                <Badge
+                  badgeContent={cartCount}
+                  color="error"
+                  max={99}
+                  overlap="circular"
+                  invisible={cartCount === 0}
+                >
+                  <ShoppingCartIcon sx={{ fontSize: 38 }} />
+                </Badge>
               </IconButton>
             )}
           </Toolbar>

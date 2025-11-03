@@ -14,19 +14,27 @@ import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import Skeleton from "@mui/material/Skeleton";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:3000/Sell"; // เปลี่ยนได้ตามแบ็กเอนด์ของคุณ
+const API_BASE = "http://localhost:3000/Sell";
 
 export default function ShopsGrid() {
-  const [shops, setShops] = useState([]);
+  const [shops, setShops] = useState([]); // ← เปลี่ยนชื่อเป็น shops
+  const navigate = useNavigate();
+
+  const goToShop = (shop) => {
+    const shopId = shop.id ?? shop.shopId ?? shop._id; // จากรูป db.json มี id แน่นอน
+    const featuredProductId = shop.featuredProductId; // ถ้าไม่มี ก็ไม่เป็นไร
+    navigate(`/shop/${shopId}`, { state: { productId: featuredProductId } });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch(API_BASE);
-        const data = await res.json();
-        setShops(data);
+        const res = await fetch(API_BASE, { signal: controller.signal });
+        const data = await res.json(); // [{ id, name, countproduct, stock }, ...]
+        setShops(Array.isArray(data) ? data : []);
       } catch (e) {
         if (e.name !== "AbortError") console.error(e);
       }
@@ -37,18 +45,18 @@ export default function ShopsGrid() {
   return (
     <AppTheme>
       <Box sx={{ px: 2.5, pt: 3 }}>
-        {shops.map((s, i) => {
+        {shops.map((s) => {
           const name = s.name ?? s.shopName ?? "-";
           const logo = s.logoUrl ?? s.logo ?? "/IMG1/bagG.png";
           const products =
             s.countproduct ?? s.productsCount ?? s.products?.length;
-          const joined = s.joined;
+          const joined = s.joined; // ในตัวอย่างไม่มี อาจเป็น undefined ได้
           const followers = s.followers ?? s.follower;
           const stock = s.stock;
 
           return (
             <Card
-              key={i}
+              key={s.id}
               variant="outlined"
               sx={{ mb: 2, borderRadius: 2, px: 2, py: 2, mx: 10 }}
             >
@@ -76,6 +84,7 @@ export default function ShopsGrid() {
                             py: 0.2,
                             color: "primary.main",
                           }}
+                          onClick={() => goToShop(s)} // ← ส่ง s
                         >
                           VIEW SHOP
                         </Button>

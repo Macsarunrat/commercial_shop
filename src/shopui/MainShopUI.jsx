@@ -14,12 +14,16 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import Skeleton from "@mui/material/Skeleton";
 import AppTheme from "../theme/AppTheme";
 import { useLocation, useParams } from "react-router-dom";
-
+import { useEffect } from "react";
+import { useCallback } from "react";
+import { useCartStore } from "../stores/cartStore";
 import ShopIcon from "./ShopIcon";
 
 const API_BASE = "http://localhost:3000";
 
 export default function ShopUI() {
+  const addItem = useCartStore((s) => s.addItem);
+
   const { categoryId } = useParams(); // ← รับ categoryId
   const { state } = useLocation(); // ← รับ productId (optional)
   const preferredProductId = state?.productId; // อาจไม่มี
@@ -30,7 +34,13 @@ export default function ShopUI() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
 
-  React.useEffect(() => {
+  const handleAddToCart = useCallback(() => {
+    if (!product) return;
+    if ((product.stock ?? 0) <= 0) return;
+    -(-+addItem(product, qty)); // หรือ fix ให้ +1 เสมอ: addItem(product, 1)
+  }, [product, qty, addItem]);
+
+  useEffect(() => {
     const controller = new AbortController();
     (async () => {
       try {
@@ -200,6 +210,7 @@ export default function ShopUI() {
                     size="large"
                     fullWidth
                     disabled={stock <= 0}
+                    onClick={handleAddToCart}
                   >
                     Add To Cart
                   </Button>

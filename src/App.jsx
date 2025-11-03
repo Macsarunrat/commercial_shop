@@ -16,6 +16,9 @@ import AllShopUI from "./shopui/AllShopUI.jsx";
 import ShopIcon from "./shopui/ShopIcon.jsx";
 import RegisterMain from "./userlogin/RegisterMain.jsx";
 import Ordered from "./component/Ordered.jsx";
+import StoreShowUI from "./shopui/StoreShowUI.jsx";
+import SearchItem from "./Search/SearchItem.jsx";
+import CategoryById from "./categorylayout/CategoryById.jsx";
 
 const router = createBrowserRouter([
   {
@@ -35,7 +38,7 @@ const router = createBrowserRouter([
         element: <CategoryShopId />,
       },
       {
-        path: "shop",
+        path: "allshop",
         element: <Shop />,
       },
       {
@@ -43,12 +46,16 @@ const router = createBrowserRouter([
         element: <MainShopUI />,
       },
       {
-        path: "allshop",
-        element: <AllShopUI />,
+        path: "/shop/:shopId",
+        element: <StoreShowUI />,
       },
       {
         path: "ordered",
         element: <Ordered />,
+      },
+      {
+        path: "search",
+        element: <SearchItem />,
       },
     ],
   },
@@ -75,6 +82,10 @@ const router = createBrowserRouter([
   {
     path: "shopicon",
     element: <ShopIcon />,
+  },
+  {
+    path: "cate2",
+    element: <CategoryById />,
   },
 ]);
 

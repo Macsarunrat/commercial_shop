@@ -16,7 +16,7 @@ import AppTheme from "../../theme/AppTheme";
 
 const Navpages = [
   { label: "OpenStore", to: "/openstore", index: "1" },
-  { label: "Shop", to: "/shop", index: "2" },
+  { label: "Shop", to: "/allshop", index: "2" },
   { label: "Ordered", to: "/ordered", index: "3" },
   { label: "Help", to: "/home", index: "4" },
 ];
