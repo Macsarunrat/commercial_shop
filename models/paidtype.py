@@ -1,3 +1,4 @@
+from __future__ import annotations
 from sqlmodel import SQLModel,Field, table, Relationship
 from typing import Optional, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
@@ -19,4 +20,10 @@ class PaidType(PaidTypeBase, table= True):
 
 #Read all type
 class PaidTypeReadAll(PaidTypeBase):
+    pass
+
+class PaidTypeRead(PaidTypeBase):
+    Paid_Type_ID: int
+
+class PaidTypeCreate(PaidTypeBase):
     pass

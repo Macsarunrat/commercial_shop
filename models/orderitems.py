@@ -5,12 +5,16 @@ from sqlalchemy import Column, DateTime
 from decimal import Decimal
 
 if TYPE_CHECKING:
-    from .order import Order
+    from .orders import Orders
+    from .sell import Sell
 
 #Create Base Class 
 class OrderItemsBase(SQLModel):
     Quantity : int
     Price_At_Purchase : Decimal = Field(sa_column=Column(DECIMAL(10,2)))
+
+    Order_ID: int = Field(foreign_key="orders.Order_ID")
+    Sell_ID: int = Field(foreign_key="sell.Sell_ID")
 
 class OrderItems(OrderItemsBase, table= True):
     __tablename__ = "orderitems"
@@ -18,3 +22,7 @@ class OrderItems(OrderItemsBase, table= True):
     Order_ID : int = Field(foreign_key="orders.Order_ID")
     #Sell_ID : int = Field(foreign_key="sell.Sell_ID")
     order : Mapped[Optional["Order"]] = Relationship(sa_relationship= relationship(back_populates="orderitems"))
+    sell_item: Mapped["Sell"] = Relationship(sa_relationship=relationship(back_populates="order_items"))
+
+class OrderItemsRead(OrderItemsBase):
+    OrderItem_ID: int
