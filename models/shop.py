@@ -78,3 +78,14 @@ class ShopOrderDetails(SQLModel):
     
     Items: List[OrderItemPublic] # 👈 (รายการสินค้า)
     Total_Price_For_Shop: Decimal
+
+
+# 🔽 --- โมเดลนี้ที่คุณเพิ่งแก้ไข ถูกต้องครับ --- 🔽
+class ShopPublicCard(SQLModel):
+    """
+    Model สำหรับแสดง Card UI (ข้อมูลร้านค้าแบบย่อ - สาธารณะ)
+    """
+    Shop_ID: int
+    Shop_Name: str
+    Shop_Phone: Optional[str] = None # 👈 (เพิ่ม Optional[str] = None ดีกว่า)
+    Cover_Img_Url: Optional[str] = None

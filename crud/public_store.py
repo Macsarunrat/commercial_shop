@@ -6,7 +6,8 @@ from typing import List
 from models.sell import Sell
 from models.products import Products
 from models.images import Image
-from models.sell import ItemPublic # <--- Import Schema ใหม่จาก models.sell
+from models.sell import ItemPublic
+from models.shop import Shop, ShopPublicCard # <--- Import Schema ใหม่จาก models.sell
 
 def _map_to_public(sell_item: Sell) -> ItemPublic:
     """Helper function ช่วยแปลงข้อมูล Sell -> ItemPublic"""
@@ -120,3 +121,34 @@ def get_sell_items_by_filters(
     results = db.exec(statement).unique().all()
     
     return [_map_to_public(item) for item in results]
+
+def get_all_shops_public(db: Session) -> List[ShopPublicCard]:
+    """
+    (API: GET /store/shops)
+    ดึงข้อมูลร้านค้าทั้งหมด (แบบย่อ) สำหรับแสดงผล Card UI
+    """
+    
+    statement = (
+        select(Shop)
+        .options(joinedload(Shop.cover_image)) 
+    )
+    
+    shops = db.exec(statement).all()
+    
+    # แปลงข้อมูล (Mapping) ให้อยู่ในรูป ShopPublicCard
+    shop_cards = []
+    for shop in shops:
+        img_url = None
+        if shop.cover_image:
+            img_url = shop.cover_image.Img_src
+            
+        shop_cards.append(
+            ShopPublicCard(
+                Shop_ID=shop.Shop_ID,
+                Shop_Name=shop.Shop_Name,
+                Shop_Phone=shop.Shop_Phone, # 👈 *** เพิ่มบรรทัดนี้ ***
+                Cover_Img_Url=img_url
+            )
+        )
+        
+    return shop_cards

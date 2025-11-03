@@ -3,7 +3,8 @@ from sqlmodel import Session
 from typing import Annotated, List
 from database import get_session
 import crud.public_store as crud_public
-from models.sell import ItemPublic # <--- Import Schema ใหม่จาก models.sell
+from models.sell import ItemPublic
+from models.shop import ShopPublicCard # <--- Import Schema ใหม่จาก models.sell
 
 router = APIRouter(
     prefix="/store", # ใช้ prefix ใหม่สำหรับหน้าร้าน
@@ -64,3 +65,14 @@ def search_products(
     )
     
     return items
+
+
+@router.get("/shops", response_model=List[ShopPublicCard])
+def get_all_shops_for_ui(session: SessionDep):
+    """
+    API: (Public) ดึงรายชื่อร้านค้าทั้งหมด
+    สำหรับให้เพื่อนทำ Card UI
+    """
+    # (โค้ดนี้ทำงานได้เลย ไม่ต้องแก้)
+    shops = crud_public.get_all_shops_public(session) 
+    return shops
