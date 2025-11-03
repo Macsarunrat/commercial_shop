@@ -2,6 +2,8 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from decimal import Decimal
+from datetime import datetime
+from models.order import THAI_TZ # (เรา import เขตเวลามาจาก model)
 
 # Import models
 from models.order import Order, OrderSummary, OrderDetailsPublic, OrderCheckoutRequest
@@ -147,9 +149,10 @@ def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderChecko
     
     # --- 3. สร้าง Order (ใบสั่งซื้อหลัก) ---
     new_order = Order(
-        User_ID=user_id, # 👈 (ใช้ user_id ที่ปลอดภัย)
+        Order_Date=datetime.now(THAI_TZ), # ⭐️ <--- เพิ่มบรรทัดนี้
+        User_ID=user_id,
         Paid_Type_ID=checkout_data.Paid_Type_ID,
-        Total_Price=backend_total_price, # <-- ใช้ราคาที่ Backend คำนวณ
+        Total_Price=backend_total_price, 
         Total_Weight=checkout_data.Total_Weight,
         Ship_Cost=checkout_data.Ship_Cost,
         Paid_Status=checkout_data.Paid_Status
