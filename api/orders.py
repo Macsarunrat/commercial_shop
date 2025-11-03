@@ -3,7 +3,7 @@ from sqlmodel import Session
 from typing import Annotated, List
 from database import get_session
 import crud.orders as crud_orders
-from models.order import OrderSummary, OrderDetailsPublic # Import 2 schemas
+from models.order import OrderSummary, OrderDetailsPublic, OrderCheckoutRequest # Import 2 schemas
 
 router = APIRouter(
     prefix="/orders",
@@ -40,3 +40,20 @@ def read_order_details(session: SessionDep, order_id: int):
         return order_details
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+@router.post("/", response_model=OrderRead)
+def create_order(session: SessionDep, checkout_data: OrderCheckoutRequest):
+    """
+    API: 4. ยืนยันการสั่งซื้อ (Checkout)
+    - ดึงของจากตะกร้า, เช็ค stock, สร้าง Order, ลบตะกร้า
+    Body = { "User_ID": 1, "Paid_Type_ID": 1, "Total_Weight": 1.5, "Ship_Cost": 50.00 }
+    """
+    try:
+        new_order = crud_orders.create_order_from_cart(session, checkout_data)
+        return new_order
+    except ValueError as e:
+        # ดัก Error (Cart is empty, Stock not enough, etc.)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # ดัก Error ทั่วไป
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {str(e)}")
