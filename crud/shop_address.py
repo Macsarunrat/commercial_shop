@@ -1,28 +1,81 @@
 from sqlmodel import Session, select
-from models.shop_address import Shop_Address, ShopAddressForm
-from models.shop import Shop
+from models.shop import Shop # 👈 (ต้อง Import Shop)
+from models.shop_address import Shop_Address, ShopAddressCreate, ShopAddressUpdate
+from typing import Optional
 
-def create_shop_address(db: Session, shop_id: int, address_data: ShopAddressForm) -> Shop_Address:
+def _check_shop_owner(db: Session, shop_id: int, user_id: int) -> Shop:
     """
-    เพิ่มที่อยู่ให้กับร้านค้าที่มีอยู่
+    Helper Function: ตรวจสอบว่า User เป็นเจ้าของ Shop นี้หรือไม่
+    - ถ้า Shop ไม่มี -> Raise ValueError
+    - ถ้าไม่ใช่เจ้าของ -> Raise PermissionError
     """
-    # 1. ตรวจสอบว่า Shop (ร้านแม่) มีอยู่จริง
     shop = db.get(Shop, shop_id)
     if not shop:
         raise ValueError(f"Shop with ID {shop_id} not found")
+    if shop.User_ID != user_id:
+        raise PermissionError("User is not authorized to manage this shop")
+    return shop
 
-    # 2. ตรวจสอบว่าร้านนี้มีที่อยู่แล้วหรือยัง (เพราะเป็น 1-to-1)
-    # (เราใช้ shop.address ที่เรา relationship ไว้)
-    if shop.address:
-        raise ValueError(f"Shop {shop_id} already has an address.")
-        
-    # 3. สร้าง Address object
-    new_address = Shop_Address(
-        **address_data.model_dump(),
-        Shop_ID=shop_id # <-- เอา ID มาจาก URL path
-    )
+def get_shop_address(db: Session, shop_id: int, user_id: int) -> Optional[Shop_Address]:
+    """
+    (API: GET) ดึงที่อยู่ร้าน (ต้องเป็นเจ้าของ)
+    """
+    # 1. ตรวจสอบสิทธิ์ (ถ้าไม่ผ่านจะ raise error)
+    _check_shop_owner(db, shop_id, user_id)
     
-    db.add(new_address)
+    # 2. ดึงที่อยู่ (ถ้าผ่าน)
+    statement = select(Shop_Address).where(Shop_Address.Shop_ID == shop_id)
+    return db.exec(statement).first()
+
+def create_or_update_shop_address(
+    db: Session, 
+    shop_id: int, 
+    user_id: int, 
+    data: ShopAddressCreate | ShopAddressUpdate
+) -> Shop_Address:
+    """
+    (API: POST & PUT) สร้างหรืออัปเดตที่อยู่ร้าน (ต้องเป็นเจ้าของ)
+    """
+    # 1. ตรวจสอบสิทธิ์ (ถ้าไม่ผ่านจะ raise error)
+    _check_shop_owner(db, shop_id, user_id)
+    
+    # 2. ค้นหาที่อยู่เดิม
+    address = db.exec(
+        select(Shop_Address).where(Shop_Address.Shop_ID == shop_id)
+    ).first()
+    
+    address_data = data.model_dump(exclude_unset=True) # (เอาเฉพาะที่ส่งมา)
+
+    if address:
+        # 3a. ถ้ามี -> อัปเดต
+        for key, value in address_data.items():
+            setattr(address, key, value)
+    else:
+        # 3b. ถ้าไม่มี -> สร้างใหม่
+        address = Shop_Address.model_validate(data, update={"Shop_ID": shop_id})
+    
+    db.add(address)
     db.commit()
-    db.refresh(new_address)
-    return new_address
+    db.refresh(address)
+    return address
+
+def delete_shop_address(db: Session, shop_id: int, user_id: int) -> bool:
+    """
+    (API: DELETE) ลบที่อยู่ (ต้องเป็นเจ้าของ)
+    """
+    # 1. ตรวจสอบสิทธิ์ (ถ้าไม่ผ่านจะ raise error)
+    _check_shop_owner(db, shop_id, user_id)
+        
+    # 2. ค้นหาที่อยู่
+    address = db.exec(
+        select(Shop_Address).where(Shop_Address.Shop_ID == shop_id)
+    ).first()
+    
+    if not address:
+        # (ถ้าไม่มีที่อยู่ให้ลบ ก็ไม่เป็นไร)
+        return True 
+        
+    # 3. ลบ
+    db.delete(address)
+    db.commit()
+    return True

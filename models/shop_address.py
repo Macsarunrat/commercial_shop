@@ -26,15 +26,19 @@ class Shop_Address(ShopAddressBase, table=True):
 
 class ShopAddressRead(ShopAddressBase):
     Shop_Address_ID: int
+    Shop_ID: int
 
+# Model สำหรับรับ Body ตอน POST (สร้างใหม่)
 class ShopAddressCreate(ShopAddressBase):
-    pass
+    pass # (รับ fields จาก Base)
 
-class ShopAddressForm(SQLModel):
-    Province: Optional[str] = Field(default=None, max_length=100)
-    Amphur: Optional[str] = Field(default=None, max_length=100)
-    Tumbon: Optional[str] = Field(default=None, max_length=100)
-    Soi: Optional[str] = Field(default=None, max_length=100)
-    Road: Optional[str] = Field(default=None, max_length=100)
-    Optional_Detail: Optional[str] = Field(default=None, max_length=255)
-    Address_Number: Optional[str] = Field(default=None, max_length=50)
+# Model สำหรับรับ Body ตอน PUT (อัปเดต)
+class ShopAddressUpdate(SQLModel):
+    # (ตั้งเป็น Optional ทั้งหมดสำหรับ PUT)
+    Province: Optional[str] = None
+    Amphur: Optional[str] = None
+    Tumbon: Optional[str] = None
+    Address_Number: Optional[str] = None
+    Soi: Optional[str] = None
+    Road: Optional[str] = None
+    Optional_Detail: Optional[str] = None
