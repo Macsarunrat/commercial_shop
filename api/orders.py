@@ -80,3 +80,29 @@ def checkout_my_cart(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+    
+
+@router.post("/{order_id}/confirm_payment", response_model=OrderSummary)
+def confirm_simulated_payment(
+    order_id: int,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    API: (SIMULATION) ยืนยันว่าได้ชำระเงิน (ปลอม) แล้ว
+    - ให้ Client (React) เรียกเส้นนี้หลังจากที่ User กด "ฉันจ่ายแล้ว" 
+    - เปลี่ยนสถานะ Order จาก 'Pending' -> 'Success'
+    """
+    try:
+        updated_order = crud_order.mark_order_as_paid(
+            db=session,
+            order_id=order_id,
+            user_id=current_user.User_ID
+        )
+        return OrderSummary.model_validate(updated_order)
+    
+    except ValueError as e:
+        # (ดัก Error เช่น "Order not found" หรือ "Order is not pending")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error: {str(e)}")

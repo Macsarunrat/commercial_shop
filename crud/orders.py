@@ -189,3 +189,30 @@ def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderChecko
     db.commit()
     
     return new_order
+
+
+
+def mark_order_as_paid(db: Session, order_id: int, user_id: int) -> Order:
+    """
+    (จำลอง) อัปเดตสถานะ Order เป็น 'Success'
+    - ตรวจสอบความเป็นเจ้าของด้วย user_id
+    """
+    
+    # 1. ค้นหา Order และตรวจสอบว่าเป็นของ User คนนี้จริง
+    statement = select(Order).where(Order.Order_ID == order_id, Order.User_ID == user_id)
+    order = db.exec(statement).first()
+
+    if not order:
+        raise ValueError("Order not found or not owned by user")
+    
+    # 2. ตรวจสอบว่ายังไม่ได้จ่าย
+    if order.Paid_Status != "Pending":
+        raise ValueError(f"Order is already in '{order.Paid_Status}' state.")
+
+    # 3. อัปเดตสถานะ (นี่คือการ "จำลอง" จ่ายเงิน)
+    order.Paid_Status = "Success"
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    
+    return order
