@@ -5,7 +5,7 @@ from decimal import Decimal
 
 # Import models
 from models.order import Order, OrderSummary, OrderDetailsPublic, OrderCheckoutRequest
-from models.orderitems import OrderItems, OrderItemPublic      
+from models.orderitems import OrderItems, OrderItemPublic
 from models.user import User
 from models.user_address import UserAddressRead
 from models.sell import Sell, ItemPublic
@@ -17,13 +17,15 @@ from models.shoporders import Shop_Orders
 def get_orders_by_user(db: Session, user_id: int) -> List[OrderSummary]:
     """
     (API ข้อ 1) ดึง Order สรุปทั้งหมดของ User
+    (user_id นี้ถูกส่งมาจาก Token ที่ปลอดภัยแล้ว)
     """
     user = db.get(User, user_id)
     if not user:
+        # นี่เป็น Error ภายใน (Token มี แต่ User หาย)
         raise ValueError(f"User with ID {user_id} not found")
 
     statement = (
-        select(Order)  # <--- แก้เป็น Order (เอกพจน์)
+        select(Order)
         .where(Order.User_ID == user_id)
         .order_by(Order.Order_Date.desc()) 
     )
@@ -39,34 +41,33 @@ def get_orders_by_user(db: Session, user_id: int) -> List[OrderSummary]:
         ) for order in orders
     ]
 
-def get_order_details(db: Session, order_id: int) -> Optional[OrderDetailsPublic]:
+def get_order_details_for_user(db: Session, order_id: int, user_id: int) -> Optional[OrderDetailsPublic]:
     """
-    (API ข้อ 2) ดึงรายละเอียด Order 1 ใบ
+    (API ข้อ 2) ดึงรายละเอียด Order 1 ใบ (ที่ตรวจสอบความเป็นเจ้าของแล้ว)
     """
     
     statement = (
-        select(Order)  # <--- แก้เป็น Order (เอกพจน์)
-        .where(Order.Order_ID == order_id)
+        select(Order)
+        # ⭐️ ตรวจสอบ User_ID ⭐️
+        .where(Order.Order_ID == order_id, Order.User_ID == user_id) 
         .options(
             joinedload(Order.user).joinedload(User.addresses),
-            # vvvv แก้ชื่อ attribute และ class vvvv
             joinedload(Order.orderitems) 
             .joinedload(OrderItems.sell_item) 
-            # ^^^^ ------------------------ ^^^^
             .joinedload(Sell.product_details)
             .joinedload(Products.images)
         )
     )
     
+    # ถ้า order_id นี้ไม่ใช่ของ user_id นี้, order จะเป็น None
     order = db.exec(statement).first()
     
     if not order:
         return None
 
+    # (โค้ดแปลงข้อมูล public_items, shipping_addr, order_details)
     public_items = []
-    # vvvv แก้ชื่อ attribute vvvv
-    for item in order.orderitems: 
-    # ^^^^ ---------------- ^^^^
+    for item in order.orderitems:
         if not item.sell_item or not item.sell_item.product_details:
             continue
             
@@ -113,13 +114,13 @@ def get_order_details(db: Session, order_id: int) -> Optional[OrderDetailsPublic
     
     return order_details
 
-def create_order_from_cart(db: Session, checkout_data: OrderCheckoutRequest) -> Order:
+def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderCheckoutRequest) -> Order:
     """
     สร้าง Order จากตะกร้าสินค้า (Checkout)
+    (user_id ถูกส่งมาจาก Token ที่ปลอดภัย)
     """
-    user_id = checkout_data.User_ID
 
-    # 1. ดึงของในตะกร้าทั้งหมด (พร้อม join ตาราง Sell)
+    # 1. ดึงของในตะกร้า (ใช้ user_id ที่ปลอดภัย)
     cart_items_statement = select(Cart).where(Cart.User_ID == user_id).options(joinedload(Cart.sell_item))
     cart_items = db.exec(cart_items_statement).all()
 
@@ -132,7 +133,6 @@ def create_order_from_cart(db: Session, checkout_data: OrderCheckoutRequest) -> 
 
     # --- 2. VALIDATION LOOP (เช็ค Stock และคำนวณราคา) ---
     for item in cart_items:
-        # sell_item คือ `item.sell_item` ที่เรา join มา
         if not item.sell_item:
             raise ValueError(f"Item Sell_ID {item.Sell_ID} in cart does not exist.")
             
@@ -141,16 +141,13 @@ def create_order_from_cart(db: Session, checkout_data: OrderCheckoutRequest) -> 
         if item.Quantity > sell_item.Stock:
             raise ValueError(f"Not enough stock for item {sell_item.Product_ID}. Requested: {item.Quantity}, Available: {sell_item.Stock}")
             
-        # คำนวณราคารวม (ฝั่ง Backend เท่านั้น)
         backend_total_price += (sell_item.Price * item.Quantity)
-        
-        # เก็บข้อมูลไว้ใช้ใน Loop ถัดไป
         items_to_process.append((item, sell_item))
         shop_ids.add(sell_item.Shop_ID)
     
     # --- 3. สร้าง Order (ใบสั่งซื้อหลัก) ---
     new_order = Order(
-        User_ID=user_id,
+        User_ID=user_id, # 👈 (ใช้ user_id ที่ปลอดภัย)
         Paid_Type_ID=checkout_data.Paid_Type_ID,
         Total_Price=backend_total_price, # <-- ใช้ราคาที่ Backend คำนวณ
         Total_Weight=checkout_data.Total_Weight,
@@ -189,7 +186,6 @@ def create_order_from_cart(db: Session, checkout_data: OrderCheckoutRequest) -> 
         db.add(shop_order_link)
 
     # --- 6. Commit Transaction ---
-    # (ทุกอย่างในข้อ 4 และ 5 จะถูก commit พร้อมกัน)
     db.commit()
     
-    return new_orde
+    return new_order

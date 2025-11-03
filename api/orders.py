@@ -1,59 +1,82 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 from typing import Annotated, List
 from database import get_session
-import crud.orders as crud_orders
-from models.order import OrderSummary, OrderDetailsPublic, OrderCheckoutRequest, OrderRead
+import crud.orders as crud_order 
+
+# 🔽 Import "ยาม" และ Models ที่จำเป็น
+from security import get_current_user
+from models.user import User
+from models.order import OrderSummary, OrderDetailsPublic, OrderCheckoutRequest, Order
 
 router = APIRouter(
     prefix="/orders",
-    tags=["Orders"]
+    tags=["Orders (Protected)"]
 )
 
 SessionDep = Annotated[Session, Depends(get_session)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
-@router.get("/user/{user_id}", response_model=List[OrderSummary])
-def read_orders_for_user(session: SessionDep, user_id: int):
+# 1. API: ดูประวัติการสั่งซื้อ (ของฉัน)
+@router.get("/me", response_model=List[OrderSummary])
+def get_my_orders(
+    session: SessionDep,
+    current_user: CurrentUser
+):
     """
-    API: ดึง Order สรุปทั้งหมดของ User
+    API: ดึงประวัติการสั่งซื้อทั้งหมด (ของฉัน)
+    (Token จะบอกว่า 'ฉัน' คือใคร)
     """
-    try:
-        orders = crud_orders.get_orders_by_user(session, user_id)
-        if not orders:
-            raise HTTPException(status_code=404, detail="No orders found for this user")
-        return orders
-    except ValueError as e:
-        # กรณี User ID ไม่มีอยู่จริง (จาก crud)
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    orders = crud_order.get_orders_by_user(session, current_user.User_ID)
+    return orders
 
+# 2. API: ดูรายละเอียด Order (ของฉัน)
 @router.get("/{order_id}", response_model=OrderDetailsPublic)
-def read_order_details(session: SessionDep, order_id: int):
+def get_my_order_details(
+    order_id: int,
+    session: SessionDep,
+    current_user: CurrentUser
+):
     """
-    API: ดึงรายละเอียด Order 1 ใบ
+    API: ดึงรายละเอียด Order 1 ใบ (ต้องเป็นของฉันเท่านั้น)
     """
-    try:
-        order_details = crud_orders.get_order_details(session, order_id)
-        if not order_details:
-            raise HTTPException(status_code=404, detail="Order not found")
-        return order_details
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    details = crud_order.get_order_details_for_user(
+        db=session, 
+        order_id=order_id, 
+        user_id=current_user.User_ID
+    )
+    
+    if not details:
+        # ถ้า order_id นี้ไม่มี หรือ เป็นของคนอื่น
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    return details
 
-@router.post("/", response_model=OrderRead)
-def create_order(session: SessionDep, checkout_data: OrderCheckoutRequest):
+# 3. API: ยืนยันการสั่งซื้อ (Checkout)
+@router.post("/checkout", response_model=OrderSummary)
+def checkout_my_cart(
+    checkout_body: OrderCheckoutRequest, # 👈 (ใช้ Model ที่ไม่มี User_ID)
+    session: SessionDep,
+    current_user: CurrentUser
+):
     """
-    API: 4. ยืนยันการสั่งซื้อ (Checkout)
-    - ดึงของจากตะกร้า, เช็ค stock, สร้าง Order, ลบตะกร้า
-    Body = { "User_ID": 1, "Paid_Type_ID": 1, "Total_Weight": 1.5, "Ship_Cost": 50.00 }
+    API: ยืนยันการสั่งซื้อ (Checkout)
+    - ย้ายของจาก Cart -> Order
+    - ตัด Stock
+    - ล้าง Cart
+    (Body ไม่ต้องส่ง User_ID, ระบบจะดึงจาก Token)
     """
     try:
-        new_order = crud_orders.create_order_from_cart(session, checkout_data)
-        return new_order
+        new_order = crud_order.create_order_from_cart(
+            db=session,
+            user_id=current_user.User_ID,
+            checkout_data=checkout_body
+        )
+        # ส่ง Order สรุปกลับไป
+        return OrderSummary.model_validate(new_order)
+        
     except ValueError as e:
-        # ดัก Error (Cart is empty, Stock not enough, etc.)
+        # (ดัก Error จาก CRUD เช่น Cart is empty, Not enough stock)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # ดัก Error ทั่วไป
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

@@ -61,7 +61,6 @@ class OrderDetailsPublic(OrderSummary):
     Shipping_Address: Optional[UserAddressRead] = None
 
 class OrderCheckoutRequest(SQLModel):
-    User_ID: int
     Paid_Type_ID: int
     Total_Weight: Decimal = Field(default=0.0)
     Ship_Cost: Decimal = Field(default=0.0)
