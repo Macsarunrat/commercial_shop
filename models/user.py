@@ -31,3 +31,16 @@ class UserRead(UserBase):
 
 class UserCreate(UserBase):
     Password: str
+
+
+
+# models/user.py (ต่อจากโค้ดเดิม)
+
+from pydantic import BaseModel
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None  # ข้อมูลใน token (สามารถเพิ่ม user_id ได้)
