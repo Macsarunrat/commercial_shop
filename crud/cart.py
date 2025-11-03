@@ -34,7 +34,7 @@ def get_cart_items_by_user(db: Session, user_id: int) -> List[CartItemPublic]:
         )
     )
     
-    cart_items = db.exec(statement).all()
+    cart_items = db.exec(statement).unique().all()
     
     # 3. แปลงข้อมูลให้อยู่ในรูปแบบ CartItemPublic
     public_cart_items = []
