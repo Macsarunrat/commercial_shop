@@ -1,12 +1,15 @@
 from sqlmodel import SQLModel, create_engine, Session
 from dotenv import load_dotenv
-from models.catagory import Catagory
+from models.category import Category
 from models.products import Products
 from models.images import Image
 from models.brand import Brand
 from models.order import Order
 from models.paidtype import PaidType
 from models.orderitems import OrderItems
+from models.user import User
+from models.useraddress import UserAddress
+
 import os
 
 load_dotenv()

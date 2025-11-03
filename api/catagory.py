@@ -2,20 +2,20 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from typing import Annotated, List
 from database import get_session
-import crud.catagory as crud_catagory
-from models.catagory import Get_All_Catagory,Create_New_Catagory
+import crud.category as crud_category
+from models.category import Get_All_Category,Create_New_Category
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
 router = APIRouter(
-    prefix = "/catagory",
-    tags = ["catagory"]
+    prefix = "/category",
+    tags = ["category"]
 )
 
-@router.get('/', response_model=List[Get_All_Catagory])
-def read_ALlCatagory(session: SessionDep):
-    return crud_catagory.get_AllCatagory(session)
+@router.get('/', response_model=List[Get_All_Category])
+def read_ALlCategory(session: SessionDep):
+    return crud_category.get_AllCategory(session)
 
-@router.post('/NewCatagory', response_model=Get_All_Catagory)
-def create_NewCatagory(session: SessionDep, catagory : Create_New_Catagory):
-    return crud_catagory.create_NewCatagory(session, catagory)
+@router.post('/NewCategory', response_model=Get_All_Category)
+def create_NewCategory(session: SessionDep, catagory : Create_New_Category):
+    return crud_category.create_NewCategory(session, cataegory)

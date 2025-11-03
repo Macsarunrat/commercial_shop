@@ -5,14 +5,14 @@ from sqlalchemy.orm import Mapped, relationship
 from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from .catagory import Catagory
+    from .category import Category
     from .images import Image
     from .brand import Brand
 
 # Product BaseModel
 class ProductBase(SQLModel):
     Product_Name : str = Field(index=True, max_length=100, min_length=1)
-    Catagory_ID : int = Field(foreign_key= "catagory.Catagory_ID")
+    Category_ID : int = Field(foreign_key= "category.Category_ID")
     Brand_ID : int = Field(foreign_key = "brand.Brand_ID")
 
 # Product table
@@ -20,7 +20,7 @@ class Products(ProductBase, table=True):
     model_config = ConfigDict(from_attributes=True)
     __tablename__ = "products"
     Product_ID : Optional[int] = Field(primary_key=True,default=None)
-    catagory: Mapped[Optional["Catagory"]] = Relationship(sa_relationship=relationship(back_populates="products"))
+    category: Mapped[Optional["Category"]] = Relationship(sa_relationship=relationship(back_populates="products"))
     images: Mapped[List["Image"]] = Relationship(sa_relationship=relationship(back_populates="products"))
     brand : Mapped[Optional["Brand"]] = Relationship(sa_relationship = relationship(back_populates = "products"))
 
