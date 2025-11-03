@@ -29,3 +29,18 @@ class UserAddressRead(UserAddressBase):
 
 class UserAddressCreate(UserAddressBase):
     pass
+
+# Model สำหรับรับ Body ตอนสร้าง (ไม่เอา User_ID)
+class UserAddressCreateBody(UserAddressBase):
+    pass
+
+# Model สำหรับรับ Body ตอนอัปเดต (ไม่เอา User_ID)
+class UserAddressUpdateBody(SQLModel):
+    Province: Optional[str] = None
+    Amphor: Optional[str] = None
+    Tumbon: Optional[str] = None
+    Soi : Optional[str] = None
+    Road: Optional[str] = None
+    Optional_detail: Optional[str] = None
+    Address_Number : Optional[str] = None
+    # ... (fields ที่อนุญาตให้อัปเดต)

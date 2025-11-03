@@ -1,34 +1,77 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 from typing import Annotated, List
 from database import get_session
 import crud.user_address as crud_address
-from models.user_address import UserAddressCreate, UserAddressRead
+from models.user_address import UserAddressRead, UserAddressCreateBody, UserAddressUpdateBody
+from pydantic import BaseModel
+
+# Import "ยาม"
+from security import get_current_user
+from models.user import User
 
 router = APIRouter(
-    prefix="/user/address",
-    tags=["User Address"]
+    prefix="/user-address",
+    tags=["User Address (Protected)"]
 )
 
 SessionDep = Annotated[Session, Depends(get_session)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+class DeleteResponse(BaseModel):
+    detail: str
+
+@router.get("/me", response_model=List[UserAddressRead])
+def get_my_addresses(
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    API: ดึงที่อยู่ทั้งหมด (ของฉัน)
+    """
+    return crud_address.get_addresses_by_user(session, current_user.User_ID)
 
 @router.post("/", response_model=UserAddressRead)
-def add_address_to_user(
-    session: SessionDep, 
-    address_data: UserAddressCreate 
+def create_my_address(
+    data: UserAddressCreateBody,
+    session: SessionDep,
+    current_user: CurrentUser
 ):
+    """
+    API: เพิ่มที่อยู่ใหม่ (ของฉัน)
+    (Body ไม่ต้องส่ง User_ID)
+    """
+    return crud_address.create_user_address(session, current_user.User_ID, data)
+
+@router.put("/{address_id}", response_model=UserAddressRead)
+def update_my_address(
+    address_id: int,
+    data: UserAddressUpdateBody,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    API: แก้ไขที่อยู่ (ของฉัน)
+    (ระบบจะเช็คว่า address_id นี้เป็นของคุณหรือไม่)
+    """
     try:
-        address = crud_address.create_user_address(session, address_data)
-        return address
+        updated = crud_address.update_user_address(session, current_user.User_ID, address_id, data)
+        return updated
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) # User not found
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) # 404 Not Found
 
-@router.get("/{user_id}", response_model=List[UserAddressRead])
-def read_user_addresses(session: SessionDep, user_id: int):
-
-    addresses = crud_address.get_addresses_by_user(session, user_id)
-    if not addresses:
-        raise HTTPException(status_code=404, detail="No addresses found for this user")
-    return addresses
+@router.delete("/{address_id}", response_model=DeleteResponse)
+def delete_my_address(
+    address_id: int,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    API: ลบที่อยู่ (ของฉัน)
+    (ระบบจะเช็คว่า address_id นี้เป็นของคุณหรือไม่)
+    """
+    try:
+        crud_address.delete_user_address(session, current_user.User_ID, address_id)
+        return {"detail": "Address deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) # 404 Not Found
