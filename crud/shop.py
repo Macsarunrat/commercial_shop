@@ -1,8 +1,14 @@
+from decimal import Decimal
+from typing import List
 from pymysql import IntegrityError
+from sqlalchemy import func
 from sqlmodel import Session, select
-from models.shop import Shop, ShopCreate
+from models.images import Image
+from models.order import Order
+from models.orderitems import OrderItemPublic, OrderItems
+from models.shop import Shop, ShopCreate, ShopOrderDetails, ShopOrderSummary
 from models.user import User
-from models.sell import Sell, SellCreate, SellItemCreate
+from models.sell import ItemPublic, Sell, SellCreate, SellItemCreate
 from models.products import Products, ProductCreate
 from sqlalchemy.orm import joinedload
 
@@ -97,3 +103,101 @@ def create_shop_product(
     db.commit()
     db.refresh(new_sell_item)
     return new_sell_item
+
+
+def get_orders_for_shop(db: Session, shop_id: int) -> List[ShopOrderSummary]:
+    """
+    (API: GET /shops/my/orders)
+    ดึงรายการออเดอร์ทั้งหมด (แบบสรุป) สำหรับร้านค้า
+    (แก้ไขให้ JOIN User เพื่อเอาชื่อ)
+    """
+    statement = (
+        select(
+            Order.Order_ID,
+            Order.Order_Date,
+            Order.Paid_Status,
+            User.Name.label("Customer_Name"), # 👈 (เพิ่มชื่อลูกค้า)
+            func.sum(OrderItems.Price_At_Purchase * OrderItems.Quantity).label("Total_Price_For_Shop")
+        )
+        .join(Order, Order.Order_ID == OrderItems.Order_ID)
+        .join(Sell, Sell.Sell_ID == OrderItems.Sell_ID)
+        .join(User, User.User_ID == Order.User_ID) # 👈 (JOIN ตาราง User)
+        .where(Sell.Shop_ID == shop_id) 
+        .group_by(Order.Order_ID, Order.Order_Date, Order.Paid_Status, User.Name) # 👈 (Group by ชื่อลูกค้าด้วย)
+        .order_by(Order.Order_Date.desc())
+    )
+    
+    results = db.exec(statement).all()
+    
+    return [ShopOrderSummary.model_validate(res) for res in results]
+
+# 🔽 --- 2. (เพิ่ม) ฟังก์ชันดูออเดอร์ (ละเอียด) --- 🔽
+def get_order_details_for_shop(db: Session, order_id: int, shop_id: int) -> ShopOrderDetails | None:
+    """
+    (API: GET /shops/my/orders/{order_id})
+    ดึงรายละเอียด Order 1 ใบ (เฉพาะส่วนของร้านค้านี้)
+    """
+    
+    # 1. ดึง Order หลัก (พร้อม Join ลูกค้า)
+    order_main = db.exec(
+        select(Order, User.Name.label("Customer_Name"))
+        .join(User, User.User_ID == Order.User_ID)
+        .where(Order.Order_ID == order_id)
+    ).first()
+
+    if not order_main:
+        raise ValueError("Order not found")
+
+    order = order_main[0]
+    customer_name = order_main[1]
+
+    # 2. ดึง "รายการสินค้า" (เฉพาะของร้านนี้เท่านั้น)
+    items_statement = (
+        select(OrderItems, Products, Image)
+        .join(Sell, Sell.Sell_ID == OrderItems.Sell_ID)
+        .join(Products, Products.Product_ID == Sell.Product_ID)
+        .outerjoin(Image, (Image.Product_ID == Products.Product_ID) & (Image.IsCover == True))
+        .where(OrderItems.Order_ID == order_id)
+        .where(Sell.Shop_ID == shop_id) # 👈 กรองเฉพาะของร้านเรา
+    )
+    item_results = db.exec(items_statement).unique().all() # (OrderItems, Products, Image)
+
+    # 3. ⭐️ Authorization Check: ถ้าไม่มีสินค้าของร้านเราในออเดอร์นี้ -> ห้ามดู
+    if not item_results:
+        raise PermissionError("This order does not contain items from your shop")
+
+    # 4. แปลงข้อมูล Items
+    public_items_list = []
+    total_price_for_shop = Decimal("0.00")
+
+    for order_item, product, image in item_results:
+        total_price_for_shop += (order_item.Price_At_Purchase * order_item.Quantity)
+        
+        # (สร้าง ItemPublic ที่เป็นรายละเอียดสินค้า)
+        item_details = ItemPublic(
+            Sell_ID=order_item.Sell_ID, 
+            Product_Name=product.Product_Name,
+            Price=order_item.Price_At_Purchase, # (ใช้ราคาตอนที่ซื้อ)
+            Stock=0, # (Stock ปัจจุบันไม่เกี่ยว)
+            Shop_ID=shop_id,
+            Cover_Image=image.Img_Src if image else None
+        )
+        
+        # (สร้าง OrderItemPublic ที่มี Quantity)
+        public_items_list.append(
+            OrderItemPublic(
+                Quantity=order_item.Quantity,
+                Price_At_Purchase=order_item.Price_At_Purchase,
+                ItemDetails=item_details
+            )
+        )
+
+    # 5. ประกอบร่างเป็น Response Model
+    return ShopOrderDetails(
+        Order_ID=order.Order_ID,
+        Order_Date=order.Order_Date,
+        Paid_Status=order.Paid_Status,
+        Customer_Name=customer_name,
+        Items=public_items_list,
+        Total_Price_For_Shop=total_price_for_shop
+    )

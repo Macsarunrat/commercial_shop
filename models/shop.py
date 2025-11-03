@@ -2,7 +2,10 @@ from __future__ import annotations
 from sqlmodel import SQLModel, Field, Relationship, table
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
+from datetime import datetime # 👈 (เพิ่ม)
+from decimal import Decimal # 👈 (เพิ่ม)
 
+from models.orderitems import OrderItemPublic
 from models.shop_image import ShopImageRead
 from .shop_address import ShopAddressRead
 
@@ -50,3 +53,28 @@ class ShopCreateBody(ShopBase):
 
 class ShopReadWithAddress(ShopRead):
     address: Optional[ShopAddressRead] = None
+
+
+class ShopOrderSummary(SQLModel):
+    """
+    (View 1) Model สำหรับแสดง "รายการออเดอร์" (แบบสรุป)
+    - วันที่, ราคารวม (ของร้านนี้), ชื่อลูกค้า
+    """
+    Order_ID: int
+    Order_Date: datetime
+    Paid_Status: str
+    Customer_Name: str # 👈 (ชื่อลูกค้า)
+    Total_Price_For_Shop: Decimal 
+
+class ShopOrderDetails(SQLModel):
+    """
+    (View 2) Model สำหรับแสดง "รายละเอียดออเดอร์"
+    - ชื่อลูกค้า, วันที่, รายการสินค้า (รูป, ชื่อ, จำนวน, ราคา), ราคารวม
+    """
+    Order_ID: int
+    Order_Date: datetime
+    Paid_Status: str
+    Customer_Name: str # 👈 (ชื่อลูกค้า)
+    
+    Items: List[OrderItemPublic] # 👈 (รายการสินค้า)
+    Total_Price_For_Shop: Decimal
