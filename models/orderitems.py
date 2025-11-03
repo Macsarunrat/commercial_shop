@@ -7,7 +7,7 @@ from typing import Optional
 from models.sell import ItemPublic
 
 if TYPE_CHECKING:
-    from .orders import Orders
+    from .order import Orders
     from .sell import Sell
 
 #Create Base Class 

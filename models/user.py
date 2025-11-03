@@ -23,7 +23,7 @@ class User(UserBase, table=True):
     # Relationships
     addresses: Mapped[List["User_Address"]] = Relationship(sa_relationship=relationship(back_populates="user"))
     cart_items: Mapped[List["Cart"]] = Relationship(sa_relationship=relationship(back_populates="user"))
-    shops: Mapped[List["Shop"]] = Relationship(sa_relationship=relationship(back_populates="user"))
+    shops: Mapped[Optional["Shop"]] = Relationship(sa_relationship=relationship(back_populates="user"))
     orders: Mapped[List["Order"]] = Relationship(sa_relationship=relationship(back_populates="user"))
 
 class UserRead(UserBase):

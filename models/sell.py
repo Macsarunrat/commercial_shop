@@ -25,7 +25,6 @@ class Sell(SellBase, table=True):
     # Relationships
     shop: Mapped["Shop"] = Relationship(sa_relationship=relationship(back_populates="items_for_sale"))
     product_details: Mapped["Products"] = Relationship(sa_relationship=relationship(back_populates="sell_instances"))
-    
     cart_items: Mapped[List["Cart"]] = Relationship(sa_relationship=relationship(back_populates="sell_item"))
     order_items: Mapped[List["OrderItems"]] = Relationship(sa_relationship=relationship(back_populates="sell_item"))
 

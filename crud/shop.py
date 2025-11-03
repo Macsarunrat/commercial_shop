@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 from models.shop import Shop, ShopCreate
 from models.user import User
+from sqlalchemy.orm import joinedload
 
 def create_shop(db: Session, shop_data: ShopCreate) -> Shop:
     """
