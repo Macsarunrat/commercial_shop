@@ -24,6 +24,7 @@ class Products(ProductBase, table=True):
     category: Mapped[Optional["Category"]] = Relationship(sa_relationship=relationship(back_populates="products"))
     images: Mapped[List["Image"]] = Relationship(sa_relationship=relationship(back_populates="products"))
     brand : Mapped[Optional["Brand"]] = Relationship(sa_relationship = relationship(back_populates = "products"))
+    sell_instances: Mapped[List["Sell"]] = Relationship(sa_relationship=relationship(back_populates="product_details"))
 
 #Get all product
 class AllProduct(ProductBase):

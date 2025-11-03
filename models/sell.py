@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from .shop import Shop
     from .products import Products
     from .cart import Cart
-    from .order_items import Order_Items
+    from .orderitems import OrderItems
 
 class SellBase(SQLModel):
     Price: Decimal = Field(sa_column=Column(DECIMAL(10, 2)))
@@ -27,10 +27,18 @@ class Sell(SellBase, table=True):
     product_details: Mapped["Products"] = Relationship(sa_relationship=relationship(back_populates="sell_instances"))
     
     cart_items: Mapped[List["Cart"]] = Relationship(sa_relationship=relationship(back_populates="sell_item"))
-    order_items: Mapped[List["Order_Items"]] = Relationship(sa_relationship=relationship(back_populates="sell_item"))
+    order_items: Mapped[List["OrderItems"]] = Relationship(sa_relationship=relationship(back_populates="sell_item"))
 
 class SellRead(SellBase):
     Sell_ID: int
     
 class SellCreate(SellBase):
     pass
+
+class ItemPublic(SQLModel):
+    Sell_ID: int
+    Product_Name: str
+    Price: Decimal
+    Stock: int
+    Shop_ID: int
+    Cover_Image: Optional[str] = None

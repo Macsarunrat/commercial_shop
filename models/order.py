@@ -5,6 +5,8 @@ from typing import Optional,List, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy import DECIMAL, Column, DateTime
 from decimal import Decimal
+from models.orderitems import OrderItemPublic
+from models.user_address import UserAddressRead
 
 if TYPE_CHECKING:
     from .paidtype import PaidType
@@ -42,3 +44,18 @@ class OrderRead(OrderBase):
 
 class OrderCreate(OrderBase):
     pass
+
+class OrderSummary(SQLModel):
+    Order_ID: int
+    Order_Date: datetime
+    Total_Price: Decimal
+    Paid_Status: str
+
+class OrderDetailsPublic(OrderSummary):
+    Total_Weight: Decimal
+    Ship_Cost: Decimal
+    Paid_Type_ID: int
+    
+    Items: List[OrderItemPublic] = []
+
+    Shipping_Address: Optional[UserAddressRead] = None

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 # from database import create_db_and_tables
 from database import create_db_and_tables
-from api import products,category,brand,image,paidtype
+from api import products, category, brand, image, paidtype, storefront, cart, orders
 import os
 
 app = FastAPI(title="Zhopee")
@@ -14,6 +14,9 @@ app.include_router(category.router)
 app.include_router(brand.router)
 app.include_router(image.router)
 app.include_router(paidtype.router)
+app.include_router(storefront.router)   
+app.include_router(cart.router)
+app.include_router(orders.router)
 
 @app.on_event("startup")
 def on_startup():

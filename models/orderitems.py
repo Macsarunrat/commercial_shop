@@ -3,6 +3,8 @@ from typing import Optional, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy import Column, DateTime
 from decimal import Decimal
+from typing import Optional
+from models.sell import ItemPublic
 
 if TYPE_CHECKING:
     from .orders import Orders
@@ -26,3 +28,8 @@ class OrderItems(OrderItemsBase, table= True):
 
 class OrderItemsRead(OrderItemsBase):
     OrderItem_ID: int
+
+class OrderItemPublic(SQLModel):
+    Quantity: int
+    Price_At_Purchase: Decimal
+    ItemDetails: Optional[ItemPublic] = None

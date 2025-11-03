@@ -2,6 +2,7 @@ from __future__ import annotations
 from sqlmodel import SQLModel, Field, Relationship, table
 from typing import Optional, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
+from .sell import ItemPublic
 
 if TYPE_CHECKING:
     from .user import User
@@ -23,3 +24,7 @@ class Cart(CartBase, table=True):
 
 class CartRead(CartBase):
     pass
+
+class CartItemPublic(SQLModel):
+    Quantity: int
+    ItemDetails: ItemPublic

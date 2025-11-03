@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from .user_address import User_Address
     from .shop import Shop
     from .cart import Cart
-    from .orders import Orders
+    from .order import Order
 
 class UserBase(SQLModel):
     Username: str = Field(index=True, unique=True, max_length=100)
@@ -24,7 +24,7 @@ class User(UserBase, table=True):
     addresses: Mapped[List["User_Address"]] = Relationship(sa_relationship=relationship(back_populates="user"))
     cart_items: Mapped[List["Cart"]] = Relationship(sa_relationship=relationship(back_populates="user"))
     shops: Mapped[List["Shop"]] = Relationship(sa_relationship=relationship(back_populates="user"))
-    orders: Mapped[List["Orders"]] = Relationship(sa_relationship=relationship(back_populates="user"))
+    orders: Mapped[List["Order"]] = Relationship(sa_relationship=relationship(back_populates="user"))
 
 class UserRead(UserBase):
     User_ID: int
