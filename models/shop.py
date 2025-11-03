@@ -13,11 +13,12 @@ if TYPE_CHECKING:
 class ShopBase(SQLModel):
     Shop_Name: str = Field(max_length=100, index=True)
     Shop_Phone: Optional[str] = Field(default=None, max_length=20)
-    User_ID: int = Field(foreign_key="users.User_ID",unique=True) # เจ้าของร้าน
+    
 
 class Shop(ShopBase, table=True):
     __tablename__ = "shop"
     Shop_ID: Optional[int] = Field(primary_key=True, default=None)
+    User_ID: int = Field(foreign_key="users.User_ID",unique=True) # เจ้าของร้าน
     
     # Relationships
     user: Mapped["User"] = Relationship(sa_relationship=relationship(back_populates="shops"))
@@ -25,11 +26,28 @@ class Shop(ShopBase, table=True):
     items_for_sale: Mapped[List["Sell"]] = Relationship(sa_relationship=relationship(back_populates="shop"))
     shop_orders: Mapped[List["Shop_Orders"]] = Relationship(sa_relationship=relationship(back_populates="shop"))
 
+# class ShopRead(ShopBase):
+#     Shop_ID: int
+
+# class ShopCreate(ShopBase):
+#     pass
+
+
+
+# Model สำหรับ Response (มี User_ID)
 class ShopRead(ShopBase):
     Shop_ID: int
+    User_ID: int
+    # ... (อาจจะมี address ฯลฯ)
 
+# Model ที่ CRUD ใช้ (มี User_ID)
 class ShopCreate(ShopBase):
-    pass
+    User_ID: int
+
+# Model ที่ API รับ Body (ไม่มี User_ID)
+class ShopCreateBody(ShopBase):
+    pass # (รับแค่ Shop_Name, Shop_Phone)
+
 
 class ShopReadWithAddress(ShopRead):
     address: Optional[ShopAddressRead] = None

@@ -35,15 +35,15 @@ def register_user(session: SessionDep, user_data: UserCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/{user_id}", response_model=UserRead)
-def read_user(session: SessionDep, user_id: int):
-    """
-    API: ดึงข้อมูล User (เผื่อไว้ทดสอบ)
-    """
-    user = crud_user.get_user(session, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+# @router.get("/{user_id}", response_model=UserRead)
+# def read_user(session: SessionDep, user_id: int):
+#     """
+#     API: ดึงข้อมูล User (เผื่อไว้ทดสอบ)
+#     """
+#     user = crud_user.get_user(session, user_id)
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return user
 
 
 @router.post("/login", response_model=Token)
