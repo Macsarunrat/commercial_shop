@@ -6,7 +6,6 @@ import Banner from "../nav/component/Bannner";
 const Nav = () => {
   return (
     <div>
-      <Bar />
       <Banner />
       <Outlet />
     </div>

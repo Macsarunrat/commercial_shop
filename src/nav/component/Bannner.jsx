@@ -1,31 +1,40 @@
 import * as React from "react";
-import { styled, alpha } from "@mui/material/styles";
 import {
   AppBar,
   Box,
   Toolbar,
-  IconButton,
-  InputBase,
   Typography,
+  IconButton,
+  Badge,
+  InputBase,
+  Button,
 } from "@mui/material";
+import { styled, alpha } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import StoreIcon from "@mui/icons-material/Store";
-import { Link, useLocation, matchPath } from "react-router-dom";
-import AppTheme from "../../theme/AppTheme";
-import Badge from "@mui/material/Badge";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useCartStore } from "../../stores/cartStore";
-import { useNavigate } from "react-router-dom";
+import AppTheme from "../../theme/AppTheme";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import HomeIcon from "@mui/icons-material/Home";
+import { useAuthStore } from "../../stores/authStore";
+import api from "../../api";
 
-const Search = styled("form")(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.primary.contrastText, 0.15),
+const selectCartItems = (state) => state.items;
+const selectClearCart = (state) => state.clearCart;
+const selectAuthToken = (state) => state.token;
+const selectAuthUser = (state) => state.user;
+const selectClearAuth = (state) => state.clearAuth;
+
+const Search = styled("div")(({ theme }) => ({
+  position: "relative",
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.black, 0.05),
   "&:hover": {
-    backgroundColor: alpha(theme.palette.primary.contrastText, 0.25),
+    backgroundColor: alpha(theme.palette.common.black, 0.1),
   },
-  marginLeft: theme.spacing(2),
-  display: "flex",
-  alignItems: "center",
-  width: "100%", // <-- ให้กว้างเต็มพื้นที่ของ box ที่ครอบ // <-- ไม่จำกัด maxWidth ตายตัว (หรือจะใส่ 1200 ก็ได้)
+  marginRight: theme.spacing(1),
+  flexGrow: 1,
 }));
 
 const SearchIconWrapper = styled("div")(({ theme }) => ({
@@ -42,104 +51,180 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: "inherit",
   width: "100%",
   "& .MuiInputBase-input": {
-    padding: theme.spacing(1.8, 5, 1.8, 0), // top, right, bottom, left
-    paddingLeft: `calc(1em + ${theme.spacing(1)})`,
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create("width"),
+    width: "100%",
   },
 }));
 
-const SearchButton = styled(IconButton)(({ theme }) => ({
-  display: "flex",
-  color: "inherit",
-}));
-
 export default function SearchAppBar() {
-  const [q, setQ] = React.useState("");
-  const cartCount = useCartStore((s) => s.cartCount());
   const navigate = useNavigate();
 
-  const onSearch = (e) => {
-    e?.preventDefault();
-    console.log("search:", q);
-    const qs = new URLSearchParams({ q }).toString();
-    +navigate(`/search?${qs}`);
+  const items = useCartStore(selectCartItems);
+  const cartCount = items.reduce((n, it) => n + (it.qty || 0), 0);
+  const clearCart = useCartStore(selectClearCart);
+
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
-  // --- เช็ค path ปัจจุบัน ---
-  const location = useLocation();
-  // ซ่อนเมื่อ path คือ /cart หรืออยู่ใต้ /cart/*
-  const hideCart = Boolean(
-    matchPath({ path: "/cart/*", end: false }, location.pathname) ||
-      matchPath({ path: "/cart", end: true }, location.pathname)
-  );
+  const token = useAuthStore(selectAuthToken);
+  const user = useAuthStore(selectAuthUser);
+  const clearAuth = useAuthStore(selectClearAuth);
+  const isAuthenticated = !!token;
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/users/logout");
+    } catch (error) {
+      console.error("Logout API failed:", error);
+    } finally {
+      clearAuth();
+      clearCart();
+      navigate("/login");
+    }
+  };
 
   return (
     <AppTheme>
-      <Box sx={{ flexGrow: 1, gap: 5 }}>
-        <AppBar position="static" color="primary">
-          <Toolbar sx={{ ml: 5 }}>
-            <StoreIcon sx={{ fontSize: 100 }} />
+      <Box sx={{ flexGrow: 1, mb: 2 }}>
+        <AppBar
+          position="static"
+          sx={{
+            bgcolor: "white",
+            color: "black",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Toolbar>
+            {/* โลโก้ */}
             <Typography
-              variant="h4"
-              component={Link}
+              variant="h6"
+              component={RouterLink}
               to="/"
-              color="inherit"
               sx={{
                 textDecoration: "none",
-                fontFamily: "Prompt, sans-serif",
-                fontWeight: 600,
-                mr: 1,
+                color: "primary.main",
+                fontWeight: 700,
+                mr: 3,
+                display: { xs: "none", sm: "block" },
               }}
             >
               Zhopee
             </Typography>
 
+            {/* ช่องค้นหา */}
             <Box
-              sx={{ flexGrow: 1, display: "flex", alignItems: "center", ml: 3 }}
+              component="form"
+              onSubmit={handleSearch}
+              sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}
             >
-              <Search
-                onSubmit={onSearch}
+              <Search>
+                <SearchIconWrapper>
+                  <SearchIcon />
+                </SearchIconWrapper>
+                <StyledInputBase
+                  placeholder="ค้นหาสินค้า..."
+                  inputProps={{ "aria-label": "search" }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </Search>
+              <Button
+                type="submit"
+                variant="contained"
+                onClick={handleSearch}
                 sx={{
-                  width: "100%",
-                  maxWidth: { xs: 400, sm: 480, md: 720, lg: 1000 },
+                  bgcolor: "primary.main",
+                  color: "white",
+                  boxShadow: "none",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  ml: 0.5,
                 }}
               >
-                <StyledInputBase
-                  placeholder="Search products…"
-                  inputProps={{ "aria-label": "search" }}
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  sx={{ mr: 6 }}
-                />
-                <SearchButton aria-label="search" onClick={onSearch}>
-                  <SearchIcon sx={{ fontSize: 22 }} />
-                </SearchButton>
-              </Search>
+                ค้นหา
+              </Button>
             </Box>
 
-            {/* แสดงตะกร้าเฉพาะเมื่อไม่ใช่หน้า cart */}
-            {!hideCart && (
-              <IconButton
-                color="inherit"
-                aria-label="cart"
-                component={Link}
-                to="/cart"
-                sx={{
-                  mr: { xs: 0, md: 0, lg: 18 },
-                  ml: { xs: 2, md: 5, lg: 18 },
-                }}
-              >
-                <Badge
-                  badgeContent={cartCount}
-                  color="error"
-                  max={99}
-                  overlap="circular"
-                  invisible={cartCount === 0}
-                >
-                  <ShoppingCartIcon sx={{ fontSize: 38 }} />
-                </Badge>
-              </IconButton>
-            )}
+            {/* ตะกร้าสินค้า */}
+            <IconButton
+              size="large"
+              color="inherit"
+              component={RouterLink}
+              to="/cart"
+              sx={{ ml: 2 }}
+            >
+              <Badge badgeContent={cartCount} color="error">
+                <ShoppingCartIcon />
+              </Badge>
+            </IconButton>
+
+            {/* ปุ่ม Account / Auth */}
+            <Box
+              sx={{
+                flexGrow: 0,
+                ml: 1,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {isAuthenticated ? (
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Button
+                    component={RouterLink}
+                    to="/my-address"
+                    color="inherit"
+                    size="small"
+                    startIcon={<HomeIcon />}
+                    sx={{ display: { xs: "none", md: "inline-flex" }, mr: 1 }}
+                  >
+                    ที่อยู่
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/openstore"
+                    color="inherit"
+                    size="small"
+                    startIcon={<StorefrontIcon />}
+                    sx={{ display: { xs: "none", md: "inline-flex" }, mr: 1 }}
+                  >
+                    เปิดร้าน
+                  </Button>
+                  <Typography
+                    variant="caption"
+                    sx={{ mr: 1, display: { xs: "none", sm: "block" } }}
+                  >
+                    สวัสดี, {user?.sub || "User"}
+                  </Typography>
+                  <Button color="inherit" size="small" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                </Box>
+              ) : (
+                <Box>
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    color="inherit"
+                    sx={{ mr: 1 }}
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/register"
+                    color="inherit"
+                  >
+                    Register
+                  </Button>
+                </Box>
+              )}
+            </Box>
           </Toolbar>
         </AppBar>
       </Box>

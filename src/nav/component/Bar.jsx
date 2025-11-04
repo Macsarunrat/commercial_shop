@@ -1,164 +1,246 @@
 import * as React from "react";
 import {
-  AppBar,
-  Box,
-  Toolbar,
-  Typography,
-  Container,
-  Button,
-  IconButton,
-  Menu,
-  MenuItem,
+  AppBar,
+  Box,
+  Toolbar,
+  Typography,
+  IconButton,
+  Badge,
+  InputBase,
+  Button,
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import { Link, useNavigate } from "react-router-dom"; 
+import { styled, alpha } from "@mui/material/styles";
+import SearchIcon from "@mui/icons-material/Search";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useCartStore } from "../../stores/cartStore";
 import AppTheme from "../../theme/AppTheme";
-import { useAuthStore } from "../../stores/authStore.jsx";
-import api from "../../api.js"; 
 
-const Navpages = [
-  { label: "OpenStore", to: "/openstore", index: "1" },
-  { label: "Shop", to: "/allshop", index: "2" },
-  { label: "Ordered", to: "/ordered", index: "3" },
-  { label: "Help", to: "/home", index: "4" },
-];
+// --- เพิ่ม Import จาก Bar.jsx ---
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import HomeIcon from "@mui/icons-material/Home";
+import { useAuthStore } from "../../stores/authStore";
+import api from "../../api";
+// --- สิ้นสุดการเพิ่ม Import ---
 
-export default function ResponsiveAppBar() {
-  const [anchorElNav, setAnchorElNav] = React.useState(null);
-  const openNav = (e) => setAnchorElNav(e.currentTarget);
-  const closeNav = () => setAnchorElNav(null);
+// --- Selectors (Stable) ---
+const selectCartItems = (state) => state.items;
+const selectClearCart = (state) => state.clearCart;
+const selectAuthToken = (state) => state.token;
+const selectAuthUser = (state) => state.user;
+const selectClearAuth = (state) => state.clearAuth;
+// --- สิ้นสุด Selectors ---
 
-  const navigate = useNavigate();
-  const isAuthenticated = useAuthStore((state) => !!state.token);
-  const user = useAuthStore((state) => state.user); 
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+// --- Styled Components (Existing) ---
+const Search = styled("div")(({ theme }) => ({
+  position: "relative",
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.black, 0.05),
+  "&:hover": {
+    backgroundColor: alpha(theme.palette.common.black, 0.1),
+  },
+  marginRight: theme.spacing(1),
+  marginLeft: 0,
+  flexGrow: 1,
+  width: "auto",
+}));
 
-  const handleLogout = async () => {
-    try {
-      await api.post("/users/logout");
-    } catch (error) {
-      console.error("Logout API failed, clearing auth locally.", error);
-    }
-    clearAuth();
-    navigate("/");
-  };
+const SearchIconWrapper = styled("div")(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: "100%",
+  position: "absolute",
+  pointerEvents: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+}));
 
-  return (
-    <AppTheme>
-      <AppBar position="static" sx={{ bgcolor: "" }}>
-        <Container maxWidth="xl">
-          <Toolbar>
-            <Box
-              sx={{
-                display: {
-                  xs: "flex",
-                  md: "none",
-                },
-              }}
-            >
-              <IconButton
-                size="large"
-                aria-label="open navigation"
-                aria-controls="nav-menu"
-                aria-haspopup="true"
-                onClick={openNav}
-                color="inherit"
-              >
-                <MenuIcon />
-              </IconButton>
-              <Menu
-                id="nav-menu"
-                anchorEl={anchorElNav}
-                open={Boolean(anchorElNav)}
-                onClose={closeNav}
-                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                transformOrigin={{ vertical: "top", horizontal: "left" }}
-              >
-                {Navpages.map((p) => (
-                  <MenuItem
-                    key={p.index}
-                    onClick={closeNav}
-                    component={Link}
-                    to={p.to}
-                    sx={{ fontFamily: "Inter", fontSize: 14 }}
-                  >
-                    {p.label}
-                  </MenuItem>
-                ))}
-              </Menu>
-            </Box>
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: "inherit",
+  width: "100%",
+  "& .MuiInputBase-input": {
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    transition: theme.transitions.create("width"),
+    width: "100%",
+  },
+}));
+// --- สิ้นสุด Styled Components ---
 
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: { xs: "none", md: "flex" },
-                gap: 10,
-                justifyContent: "start",
-              }}
-            >
-              {Navpages.map((p) => (
-                <Button
-                  key={p.index}
-                  component={Link}
-                  to={p.to}
-                  sx={{
-                    color: "white",
-                    fontFamily: "Prompt",
-                    fontWeight: 300,
-                    fontSize: { md: 16, lg: 18 },
-                  }}
-                >
-                  {p.label}
-                </Button>
-              ))}
-            </Box>
+export default function SearchAppBar() {
+  const navigate = useNavigate();
 
-            <Box
-              sx={{
-                ml: "auto",
-                display: "flex",
-                gap: 2,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {isAuthenticated ? (
-                <>
-                  <Typography sx={{ color: "white", fontSize: 16 }}>
-                    สวัสดี, {user?.sub}
-                  </Typography>
-                  <Button
-                    onClick={handleLogout}
-                    variant="outlined"
-                    sx={{ color: "white", borderColor: "white" }}
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    component={Link}
-                    to={"register"}
-                    variant="outlined"
-                    sx={{ color: "white", borderColor: "white" }}
-                  >
-                    Register
-                  </Button>
-                  <Button
-                    component={Link}
-                    to={"login"}
-                    variant="outlined"
-                    sx={{ color: "white", borderColor: "white" }}
-                  >
-                    Login
-                  </Button>
-                </>
-              )}
-            </Box>
-          </Toolbar>
-        </Container>
-      </AppBar>
-    </AppTheme>
-  );
+  // Logic ตะกร้า
+  const items = useCartStore(selectCartItems);
+  const cartCount = items.reduce((n, it) => n + (it.qty || 0), 0);
+  const clearCart = useCartStore(selectClearCart);
+
+  // Logic ค้นหา
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
+  // --- เพิ่ม Logic Auth จาก Bar.jsx ---
+  const token = useAuthStore(selectAuthToken);
+  const user = useAuthStore(selectAuthUser);
+  const clearAuth = useAuthStore(selectClearAuth);
+  const isAuthenticated = !!token;
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/users/logout");
+    } catch (error) {
+      console.error("Logout API failed (ignoring):", error);
+    } finally {
+      clearAuth();
+      clearCart();
+      navigate("/login");
+    }
+  };
+  // --- สิ้นสุด Logic Auth ---
+
+  return (
+    <AppTheme>
+      <Box sx={{ flexGrow: 1, mb: 2 }}>
+        <AppBar
+          position="static"
+          sx={{
+            bgcolor: "white",
+            color: "black",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Toolbar>
+            {/* 1. โลโก้ "Zhoppe" */}
+            <Typography
+              variant="h6"
+              component={RouterLink}
+              to="/"
+              sx={{
+                textDecoration: "none",
+                color: "primary.main",
+                fontWeight: 700,
+                mr: 3,
+                display: { xs: "none", sm: "block" },
+              }}
+            >
+              Zhopee
+            </Typography>
+
+            {/* 2. แถบค้นหา และ ปุ่มค้นหา */}
+            <Box
+              component="form"
+              onSubmit={handleSearch}
+              sx={{ flexGrow: 1, display: "flex" }}
+            >
+              <Search sx={{ flexGrow: 1 }}>
+                <SearchIconWrapper>
+                  <SearchIcon />
+                </SearchIconWrapper>
+                <StyledInputBase
+                  placeholder="ค้นหาสินค้า..."
+                  inputProps={{ "aria-label": "search" }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </Search>
+              <Button
+                type="submit"
+                variant="contained"
+                onClick={handleSearch}
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "white",
+                  boxShadow: "none",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  ml: 0.5,
+                }}
+              >
+                ค้นหา
+              </Button>
+            </Box>
+
+            {/* 3. ปุ่ม Login/Logout และ ตะกร้า */}
+            <Box
+              sx={{
+                flexGrow: 0,
+                ml: 2,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {isAuthenticated ? (
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ mr: 1, display: { xs: "none", sm: "block" } }}
+                  >
+                    สวัสดี, {user?.sub || "User"}
+                  </Typography>
+                  <Button
+                    component={RouterLink}
+                    to="/openstore"
+                    color="inherit"
+                    size="small"
+                    startIcon={<StorefrontIcon />}
+                    sx={{ display: { xs: "none", md: "inline-flex" } }}
+                  >
+                    เปิดร้าน
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/my-address"
+                    color="inherit"
+                    size="small"
+                    startIcon={<HomeIcon />}
+                    sx={{ display: { xs: "none", md: "inline-flex" } }}
+                  >
+                    ที่อยู่
+                  </Button>
+                  <Button color="inherit" size="small" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                </Box>
+              ) : (
+                <Box>
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    color="inherit"
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/register"
+                    color="inherit"
+                  >
+                    Register
+                  </Button>
+                </Box>
+              )}
+
+              {/* 4. ตะกร้าสินค้า (ย้ายมาไว้หลังปุ่มค้นหา) */}
+              <IconButton
+                size="large"
+                color="inherit"
+                component={RouterLink}
+                to="/cart"
+                sx={{ ml: 1 }}
+              >
+                <Badge badgeContent={cartCount} color="error">
+                  <ShoppingCartIcon />
+                </Badge>
+              </IconButton>
+            </Box>
+          </Toolbar>
+        </AppBar>
+      </Box>
+    </AppTheme>
+  );
 }
+
