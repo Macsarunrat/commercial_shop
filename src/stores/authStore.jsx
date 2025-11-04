@@ -28,7 +28,7 @@ export const useAuthStore = create(
 
         } catch (error) {
           console.error("AuthStore: Failed to decode token", error);
-          // If decoding fails, clear auth state
+
           get().clearAuth(); 
         }
       },
