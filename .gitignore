@@ -25,5 +25,5 @@ dist-ssr
 __pycache__/
 *.pyc
 
-# Virtual Environment (กันไว้เลยครับ)
+# Virtual Environment 
 venv/

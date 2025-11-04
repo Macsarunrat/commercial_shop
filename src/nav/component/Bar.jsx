@@ -76,7 +76,7 @@ export default function ResponsiveAppBar() {
                 // ⭐️ ถ้า Login แล้ว (มี Token) ⭐️
                 <>
                   <Typography sx={{ color: "white", fontSize: 16 }}>
-                    สวัสดี, {user?.sub} {/* 👈 (แสดง Username จาก Token) */}
+                    สวัสดี {user?.sub} {/* 👈 (แสดง Username จาก Token) */}
                   </Typography>
                   <Button
                     onClick={handleLogout} // 👈 (เรียกฟังก์ชัน Logout)
