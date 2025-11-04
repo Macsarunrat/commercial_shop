@@ -1,31 +1,44 @@
 // src/cart/cartCon.jsx
-const API = "https://great-lobster-rightly.ngrok-free.app";
-const CART = `${API}/cart`;
+const API_BASE = "https://great-lobster-rightly.ngrok-free.app";
+const CART = `${API_BASE}/cart`;
 
-const BASE_HEADERS = {
-  "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true",
-};
+const NGROK_HDR = { "ngrok-skip-browser-warning": "true" };
 
-// ถ้าเป็น cookie-session ให้ใช้ credentials: 'include'
-// ถ้าเป็น Bearer token ให้ส่ง { token: '...' }
-function buildInit({ token, useCookie = true } = {}) {
-  const headers = token
-    ? { ...BASE_HEADERS, Authorization: `Bearer ${token}` }
-    : BASE_HEADERS;
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
+function buildInit({ token, useCookie = false } = {}) {
+  // ใช้ Bearer token เป็นหลัก -> ไม่ต้องส่งคุ้กกี้ (omit)
+  // ถ้าหลังบ้านผูกกับคุ้กกี้จริง ๆ ค่อยตั้ง useCookie=true
   return {
-    headers,
-    credentials: useCookie ? "include" : undefined,
+    headers: {
+      "Content-Type": "application/json",
+      ...NGROK_HDR, // เปิดไว้ได้ ปลอดภัยกว่าปิด (ไม่กระทบ CORS)
+      ...authHeaders(token),
+    },
+    credentials: useCookie ? "include" : "omit",
   };
 }
 
-async function toError(res) {
-  let msg = `HTTP ${res.status}`;
+async function parseResponse(res) {
+  if (res.status === 204) return {};
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    return await res.json().catch(() => ({}));
+  }
+  const text = await res.text().catch(() => "");
   try {
-    const data = await res.json();
-    msg = data?.error || data?.message || msg;
-  } catch {}
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+async function toError(res) {
+  const data = await parseResponse(res);
+  const msg =
+    data?.detail || data?.message || data?.error || `HTTP ${res.status}`;
   return new Error(msg);
 }
 
@@ -34,10 +47,10 @@ export async function getCartServer(opts) {
   const init = buildInit(opts);
   const res = await fetch(`${CART}/`, { ...init, method: "GET" });
   if (!res.ok) throw await toError(res);
-  return res.json();
+  return parseResponse(res);
 }
 
-/** POST /cart/  { Sell_ID, Quantity } */
+/** POST /cart/  (รูปแบบตาม Swagger)  { Sell_ID, Quantity } */
 export async function addToCartServer(sellId, quantity = 1, opts) {
   const init = buildInit(opts);
   const res = await fetch(`${CART}/`, {
@@ -49,10 +62,10 @@ export async function addToCartServer(sellId, quantity = 1, opts) {
     }),
   });
   if (!res.ok) throw await toError(res);
-  return res.json(); // ตัวอย่าง response: { Quantity, User_ID, Sell_ID }
+  return parseResponse(res);
 }
 
-/** PUT /cart/{sell_id}  { Quantity } */
+/** PUT /cart/{sell_id}   (รูปแบบตาม Swagger)  { Quantity } */
 export async function updateCartItemServer(sellId, quantity, opts) {
   const init = buildInit(opts);
   const res = await fetch(`${CART}/${encodeURIComponent(sellId)}`, {
@@ -61,7 +74,7 @@ export async function updateCartItemServer(sellId, quantity, opts) {
     body: JSON.stringify({ Quantity: Number(quantity) }),
   });
   if (!res.ok) throw await toError(res);
-  return res.json();
+  return parseResponse(res);
 }
 
 /** DELETE /cart/{sell_id} */
@@ -72,10 +85,5 @@ export async function removeCartItemServer(sellId, opts) {
     method: "DELETE",
   });
   if (!res.ok) throw await toError(res);
-  // บางระบบส่ง 204; คืน {} ให้เสมอ
-  try {
-    return await res.json();
-  } catch {
-    return {};
-  }
+  return parseResponse(res);
 }

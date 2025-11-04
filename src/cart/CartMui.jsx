@@ -1,160 +1,332 @@
+// src/cart/CartMui.jsx
 import * as React from "react";
-import {
-  Box,
-  Paper,
-  Typography,
-  Checkbox,
-  Link,
-  Chip,
-  Divider,
-  ButtonGroup,
-  Button,
-} from "@mui/material";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardMedia from "@mui/material/CardMedia";
+import Typography from "@mui/material/Typography";
+import Stack from "@mui/material/Stack";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Divider from "@mui/material/Divider";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import Skeleton from "@mui/material/Skeleton";
+import { useNavigate } from "react-router-dom";
+import AppTheme from "../theme/AppTheme";
 
-// กำหนดเลย์เอาต์คอลัมน์หลักของแถวสินค้าให้เหมือนภาพ
-// ซ้าย (รูป+รายละเอียด) | ราคา | จำนวน | Subtotal | แอ็กชัน
-const ROW_COLS = {
-  xs: "1fr", // มือถือ: เรียงลง
-  md: "1fr 120px 140px 120px 120px", // จอปกติ: 5 คอลัมน์
-};
+import useCartStore from "../stores/cartStore";
+import { useAuthStore } from "../stores/authStore";
+// ✅ ไม่ต้อง import server API ตรง ๆ แล้ว ให้ใช้ผ่าน store เท่านั้น
+// import { updateCartItemServer, removeCartItemServer } from "../cart/cartCon.jsx";
 
-export default function CartLikeRow() {
+export default function CartMui() {
+  const navigate = useNavigate();
+
+  // ----- Cart store -----
+  const items = useCartStore((s) => s.items); // [{id,name,price,stock,image,qty}]
+  const cartCount = useCartStore((s) => s.cartCount()); // รวมชิ้น
+  const fetchCart = useCartStore((s) => s.fetchCart); // โหลดจากเซิร์ฟเวอร์
+  const setItemQtyLocal = useCartStore((s) => s.setItemQty); // อัปเดตจำนวน (store จะยิง API ให้)
+  const removeItemLocal = useCartStore((s) => s.removeItem); // ลบ (store จะยิง API ให้)
+
+  // ----- Auth -----
+  const token = useAuthStore((s) => s.getToken());
+
+  const [loading, setLoading] = React.useState(true);
+  const [updating, setUpdating] = React.useState({}); // { [id]: boolean }
+
+  const formatBaht = (n) => new Intl.NumberFormat("th-TH").format(n);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        if (token) {
+          await fetchCart(); // ใช้เมธอดใน store ให้จัดการ API และ state
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token, fetchCart]);
+
+  // ----- Update quantity -----
+  const handleUpdateQuantity = async (sellId, newQty) => {
+    // ถ้ากด – แล้วเหลือ 0 => ลบทันที
+    if (newQty <= 0) {
+      return handleRemoveItem(sellId);
+    }
+    setUpdating((p) => ({ ...p, [sellId]: true }));
+    try {
+      // ให้ store จัดการ (ยิง API + อัปเดต state) — ไม่ต้องยิง API ซ้ำเอง
+      await setItemQtyLocal(sellId, newQty);
+    } catch (e) {
+      alert(`อัปเดตไม่สำเร็จ: ${e.message}`);
+    } finally {
+      setUpdating((p) => ({ ...p, [sellId]: false }));
+    }
+  };
+
+  // ----- Remove item (optimistic update) -----
+  const handleRemoveItem = async (sellId) => {
+    if (!confirm("ต้องการลบสินค้านี้ออกจากตะกร้าหรือไม่?")) return;
+
+    // Optimistic: เอาออกจากหน้าจอก่อน
+    const prevItems = useCartStore.getState().items;
+    useCartStore.setState({
+      items: prevItems.filter((p) => String(p.id) !== String(sellId)),
+    });
+
+    setUpdating((p) => ({ ...p, [sellId]: true }));
+    try {
+      // ให้ store ยิง API และ sync ภายใน (จะทำซ้ำกับ state ที่เราเพิ่งเอาออก แต่ไม่เป็นไร)
+      await removeItemLocal(sellId);
+    } catch (e) {
+      // Rollback ถ้า fail
+      useCartStore.setState({ items: prevItems });
+      alert(`ลบไม่สำเร็จ: ${e.message}`);
+    } finally {
+      setUpdating((p) => ({ ...p, [sellId]: false }));
+    }
+  };
+
+  const totalPrice = items.reduce(
+    (sum, it) => sum + (it.price || 0) * (it.qty || 0),
+    0
+  );
+
+  if (loading) {
+    return (
+      <AppTheme>
+        <Box sx={{ maxWidth: 1200, mx: "auto", mt: 5, px: 2, pb: 5 }}>
+          <Skeleton variant="rectangular" height={400} />
+        </Box>
+      </AppTheme>
+    );
+  }
+
+  if (!token) {
+    return (
+      <AppTheme>
+        <Box sx={{ maxWidth: 1200, mx: "auto", mt: 5, px: 2, pb: 5 }}>
+          <Card sx={{ p: 4, textAlign: "center" }}>
+            <Typography variant="h6" gutterBottom>
+              กรุณาเข้าสู่ระบบเพื่อดูตะกร้าสินค้า
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => navigate("/login")}
+              sx={{ mt: 2 }}
+            >
+              เข้าสู่ระบบ
+            </Button>
+          </Card>
+        </Box>
+      </AppTheme>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <AppTheme>
+        <Box sx={{ maxWidth: 1200, mx: "auto", mt: 5, px: 2, pb: 5 }}>
+          <Card sx={{ p: 4, textAlign: "center" }}>
+            <ShoppingCartIcon sx={{ fontSize: 80, color: "text.disabled" }} />
+            <Typography variant="h5" sx={{ mt: 2 }}>
+              ตะกร้าสินค้าว่างเปล่า
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 1 }}>
+              คุณยังไม่มีสินค้าในตะกร้า
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => navigate("/shop")}
+              sx={{ mt: 3 }}
+            >
+              เริ่มช้อปปิ้ง
+            </Button>
+          </Card>
+        </Box>
+      </AppTheme>
+    );
+  }
+
   return (
-    <Box sx={{ p: 2 }}>
-      {/* แถวชื่อร้าน + checkbox + chat now */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
-        <Checkbox size="small" />
-        <Typography sx={{ fontWeight: 600 }}>zkdmy04.th(Shopname)</Typography>
-        <Box
-          component="span"
-          sx={{
-            ml: 1,
-            px: 1,
-            py: 0.25,
-            borderRadius: 1,
-            bgcolor: "success.light",
-            color: "common.white",
-            fontSize: 12,
-          }}
-        ></Box>
-      </Box>
+    <AppTheme>
+      <Box sx={{ maxWidth: 1200, mx: "auto", mt: 5, px: 2, pb: 5 }}>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          ตะกร้าสินค้า ({cartCount} รายการ)
+        </Typography>
 
-      {/* การ์ดร้าน + bundle */}
-      <Paper variant="outlined" sx={{ overflow: "hidden" }}>
-        {/* แบนเนอร์ Bundle */}
-
-        {/* แถวสินค้า */}
         <Box
           sx={{
-            px: 2,
-            py: 2,
             display: "grid",
-            gridTemplateColumns: ROW_COLS,
-            alignItems: "center",
-            columnGap: 2,
-            rowGap: 12 / 8,
+            gridTemplateColumns: { xs: "1fr", md: "1fr 360px" },
+            gap: 3,
           }}
         >
-          {/* ซ้าย: รูปสินค้า + รายละเอียด */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 2,
-              minWidth: 0,
-            }}
-          >
-            {/* img product */}
-            <Box
-              component="img"
-              src="https://via.placeholder.com/80x80.png"
-              alt="product"
-              sx={{
-                width: 80,
-                height: 80,
-                objectFit: "cover",
-                borderRadius: 1,
-                border: (t) => `1px solid ${t.palette.divider}`,
-                flexShrink: 0,
-              }}
-            />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ mb: 0.5 }} noWrap>
-                (NameProduct)
-              </Typography>
+          {/* รายการสินค้า */}
+          <Stack spacing={2}>
+            {items.map((it) => {
+              const sellId = it.id;
+              const qty = it.qty || 0;
 
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  color: "text.secondary",
-                }}
-              >
-                <Typography variant="body2">Variations:</Typography>
-                <Typography variant="body2">(ProductDetail)</Typography>
+              return (
+                <Card key={sellId} sx={{ p: { xs: 1.5, md: 2.5 } }}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        md: "96px 1fr 180px 72px",
+                      },
+                      alignItems: "center",
+                      columnGap: 2,
+                      rowGap: 1.5,
+                    }}
+                  >
+                    {/* รูป */}
+                    <Box sx={{ justifySelf: { md: "start" } }}>
+                      <CardMedia
+                        component="img"
+                        image={it.image || "/IMG1/bagG.png"}
+                        alt={it.name}
+                        sx={{
+                          width: 96,
+                          height: 96,
+                          objectFit: "cover",
+                          borderRadius: 1.2,
+                          border: (t) => `1px solid ${t.palette.divider}`,
+                        }}
+                        onError={(e) =>
+                          (e.currentTarget.src = "/IMG1/bagG.png")
+                        }
+                      />
+                    </Box>
+
+                    {/* ชื่อ + ราคา */}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={600}
+                        noWrap
+                        title={it.name}
+                        sx={{ lineHeight: 1.3, minHeight: 24 }}
+                      >
+                        {it.name}
+                      </Typography>
+                      <Typography
+                        variant="h6"
+                        color="primary.main"
+                        sx={{ mt: 0.5, fontWeight: 700 }}
+                      >
+                        ฿{formatBaht(it.price || 0)}
+                      </Typography>
+                    </Box>
+
+                    {/* ปรับจำนวน */}
+                    <Box
+                      sx={{
+                        justifyContent: { md: "center" },
+                        display: "flex",
+                        alignItems: "center",
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        height: 40,
+                        width: 160,
+                      }}
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => handleUpdateQuantity(sellId, qty - 1)}
+                        disabled={updating[sellId]}
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography sx={{ width: 40, textAlign: "center" }}>
+                        {qty}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleUpdateQuantity(sellId, qty + 1)}
+                        disabled={
+                          qty >= (it.stock || Infinity) || updating[sellId]
+                        }
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+
+                    {/* ลบ */}
+                    <Box sx={{ justifySelf: { md: "end" } }}>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleRemoveItem(sellId)}
+                        disabled={updating[sellId]}
+                        aria-label="delete item"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                </Card>
+              );
+            })}
+          </Stack>
+
+          {/* สรุปคำสั่งซื้อ */}
+          <Card
+            sx={{ p: 3, position: "sticky", top: 20, height: "fit-content" }}
+          >
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              สรุปคำสั่งซื้อ
+            </Typography>
+            <Divider sx={{ my: 2 }} />
+            <Stack spacing={1.5}>
+              <Box display="flex" justifyContent="space-between">
+                <Typography color="text.secondary">
+                  ยอดรวม ({cartCount} ชิ้น)
+                </Typography>
+                <Typography>฿{formatBaht(totalPrice)}</Typography>
               </Box>
-            </Box>
-          </Box>
-
-          {/* ราคา (เดิม + ปัจจุบัน) */}
-          <Box sx={{ textAlign: { md: "right" } }}>
-            <Typography
-              variant="body2"
-              sx={{ textDecoration: "line-through", color: "text.disabled" }}
+              <Box display="flex" justifyContent="space-between">
+                <Typography color="text.secondary">ค่าจัดส่ง</Typography>
+                <Typography color="success.main">ฟรี</Typography>
+              </Box>
+              <Divider />
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="h6" fontWeight={700}>
+                  ยอดรวมทั้งหมด
+                </Typography>
+                <Typography variant="h6" fontWeight={700} color="primary.main">
+                  ฿{formatBaht(totalPrice)}
+                </Typography>
+              </Box>
+            </Stack>
+            <Button
+              variant="contained"
+              size="large"
+              fullWidth
+              sx={{ mt: 3 }}
+              onClick={() => navigate("/checkout")}
             >
-              (Discount)
-            </Typography>
-            <Typography sx={{ fontWeight: 600 }}>(Price)</Typography>
-          </Box>
-
-          {/* จำนวน (stepper) */}
-          <Box sx={{ display: "flex", justifyContent: { md: "center" } }}>
-            <ButtonGroup variant="outlined" size="small">
-              <Button>-</Button>
-              <Button disabled>1</Button>
-              <Button>+</Button>
-            </ButtonGroup>
-          </Box>
-
-          {/* Subtotal */}
-          <Box sx={{ textAlign: { md: "right" } }}>
-            <Typography sx={{ fontWeight: 700, color: "error.main" }}>
-              (RealPrice)
-            </Typography>
-          </Box>
-
-          {/* Actions */}
-          <Box
-            sx={{
-              textAlign: { xs: "left", md: "right" },
-              display: "flex",
-              flexDirection: { xs: "row", md: "column" },
-              gap: 0.5,
-              justifyContent: { xs: "flex-start", md: "flex-end" },
-            }}
-          >
-            <Link
-              underline="none"
-              color="text.primary"
-              sx={{ cursor: "pointer" }}
+              ดำเนินการชำระเงิน
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              fullWidth
+              sx={{ mt: 2 }}
+              onClick={() => navigate("/shop")}
             >
-              Delete
-            </Link>
-          </Box>
+              เลือกซื้อสินค้าต่อ
+            </Button>
+          </Card>
         </Box>
-      </Paper>
-
-      {/* ส่วนลด/โค้ดร้าน */}
-      <Box
-        sx={{
-          mt: 2,
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          color: "text.secondary",
-        }}
-      ></Box>
-    </Box>
+      </Box>
+    </AppTheme>
   );
 }

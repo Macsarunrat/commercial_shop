@@ -1,13 +1,11 @@
 import React from "react";
-import Nav from "./nav/Nav";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import Nav from "./nav/Nav";
 import OpenStore from "./component/OpenStore.jsx";
 import Home from "./component/Home.jsx";
 import Shop from "./component/Shop.jsx";
-
 import Login from "./userlogin/Login.jsx";
 import Cart from "./cart/Cart.jsx";
-
 import AllCategories2 from "./categorylayout/AllCategories2.jsx";
 import MoreAllCategories from "./categorylayout/MoreAllCategories.jsx";
 import CategoryShopId from "./categorylayout/CategoryShopId.jsx";
@@ -20,6 +18,10 @@ import StoreShowUI from "./shopui/StoreShowUI.jsx";
 import SearchItem from "./Search/SearchItem.jsx";
 import CategoryById from "./categorylayout/CategoryById.jsx";
 import Help from "./component/Help.jsx";
+
+import { useEffect } from "react";
+import { useAuthStore } from "./stores/authStore.jsx";
+import useCartStore from "./stores/cartStore";
 
 const router = createBrowserRouter([
   {
@@ -76,25 +78,23 @@ const router = createBrowserRouter([
     path: "cart",
     element: <Cart />,
   },
-  {
-    path: "columncategories",
-    element: <AllCategories2 />,
-  },
-  {
-    path: "5columncategories",
-    element: <MoreAllCategories />,
-  },
-  {
-    path: "shopicon",
-    element: <ShopIcon />,
-  },
-  {
-    path: "cate2",
-    element: <CategoryById />,
-  },
 ]);
 
 const App = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const fetchCart = useCartStore((state) => state.fetchCart);
+  const clearCart = useCartStore((state) => state.clearCart);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("App.jsx: User is authenticated. Fetching cart...");
+      fetchCart();
+    } else {
+      console.log("App.jsx: User is not authenticated. Clearing local cart.");
+      clearCart();
+    }
+  }, [isAuthenticated, fetchCart, clearCart]);
+
   return (
     <>
       <RouterProvider router={router} />

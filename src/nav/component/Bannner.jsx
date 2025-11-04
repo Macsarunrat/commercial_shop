@@ -1,3 +1,4 @@
+// src/nav/component/Bannner.jsx (หรือ SearchAppBar.jsx ตามที่คุณตั้งชื่อ)
 import * as React from "react";
 import { styled, alpha } from "@mui/material/styles";
 import {
@@ -7,15 +8,14 @@ import {
   IconButton,
   InputBase,
   Typography,
+  Badge,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import StoreIcon from "@mui/icons-material/Store";
-import { Link, useLocation, matchPath } from "react-router-dom";
+import { Link, useLocation, matchPath, useNavigate } from "react-router-dom";
 import AppTheme from "../../theme/AppTheme";
-import Badge from "@mui/material/Badge";
-import { useCartStore } from "../../stores/cartStore";
-import { useNavigate } from "react-router-dom";
+import useCartStore from "../../stores/cartStore";
 
 const Search = styled("form")(({ theme }) => ({
   backgroundColor: alpha(theme.palette.primary.contrastText, 0.15),
@@ -25,7 +25,7 @@ const Search = styled("form")(({ theme }) => ({
   marginLeft: theme.spacing(2),
   display: "flex",
   alignItems: "center",
-  width: "100%", // <-- ให้กว้างเต็มพื้นที่ของ box ที่ครอบ // <-- ไม่จำกัด maxWidth ตายตัว (หรือจะใส่ 1200 ก็ได้)
+  width: "100%",
 }));
 
 const SearchIconWrapper = styled("div")(({ theme }) => ({
@@ -54,24 +54,45 @@ const SearchButton = styled(IconButton)(({ theme }) => ({
 }));
 
 export default function SearchAppBar() {
-  const [q, setQ] = React.useState("");
-  const cartCount = useCartStore((s) => s.cartCount());
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // จำนวนสินค้าในตะกร้า
+  const cartCount = useCartStore((s) => s.cartCount());
+
+  // state ช่องค้นหา
+  const [q, setQ] = React.useState("");
+
+  // ซิงก์ค่าช่องค้นหาตามพารามิเตอร์ q เมื่อเราอยู่หน้า /search
+  React.useEffect(() => {
+    const onSearchPage =
+      matchPath({ path: "/search", end: true }, location.pathname) != null;
+    if (onSearchPage) {
+      const sp = new URLSearchParams(location.search);
+      setQ(sp.get("q") ?? "");
+    }
+  }, [location.pathname, location.search]);
+
+  // กดค้นหา (ทั้ง Enter และปุ่มไอคอน)
   const onSearch = (e) => {
     e?.preventDefault();
-    console.log("search:", q);
-    const qs = new URLSearchParams({ q }).toString();
-    +navigate(`/search?${qs}`);
+    const query = (q || "").trim();
+    if (!query) return;
+
+    // URLSearchParams จะเข้ารหัส (ภาษาไทย/ช่องว่าง) ให้เอง
+    const qs = new URLSearchParams({ q: query }).toString();
+
+    // ถ้าอยู่หน้า /search แล้วให้ replace เพื่อไม่ดัน history ยาวเกิน
+    const onSearchPage =
+      matchPath({ path: "/search", end: true }, location.pathname) != null;
+
+    navigate(`/search?${qs}`, { replace: onSearchPage });
   };
 
-  // --- เช็ค path ปัจจุบัน ---
-  const location = useLocation();
-  // ซ่อนเมื่อ path คือ /cart หรืออยู่ใต้ /cart/*
-  const hideCart = Boolean(
+  // ซ่อน cart icon เมื่ออยู่หน้า cart
+  const hideCart =
     matchPath({ path: "/cart/*", end: false }, location.pathname) ||
-      matchPath({ path: "/cart", end: true }, location.pathname)
-  );
+    matchPath({ path: "/cart", end: true }, location.pathname);
 
   return (
     <AppTheme>
@@ -99,25 +120,31 @@ export default function SearchAppBar() {
             >
               <Search
                 onSubmit={onSearch}
+                role="search"
+                aria-label="product search"
                 sx={{
                   width: "100%",
                   maxWidth: { xs: 400, sm: 480, md: 720, lg: 1000 },
+                  position: "relative",
                 }}
               >
+                {/* (ถ้าต้องการแสดง icon คงที่ด้านซ้าย ให้ปลดคอมเมนต์) */}
+                {/* <SearchIconWrapper>
+                  <SearchIcon sx={{ fontSize: 22 }} />
+                </SearchIconWrapper> */}
                 <StyledInputBase
-                  placeholder="Search products…"
+                  placeholder="ค้นหาสินค้า… / Search products…"
                   inputProps={{ "aria-label": "search" }}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   sx={{ mr: 6 }}
                 />
-                <SearchButton aria-label="search" onClick={onSearch}>
+                <SearchButton aria-label="search" type="submit">
                   <SearchIcon sx={{ fontSize: 22 }} />
                 </SearchButton>
               </Search>
             </Box>
 
-            {/* แสดงตะกร้าเฉพาะเมื่อไม่ใช่หน้า cart */}
             {!hideCart && (
               <IconButton
                 color="inherit"

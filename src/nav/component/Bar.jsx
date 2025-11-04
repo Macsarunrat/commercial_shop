@@ -11,8 +11,10 @@ import {
   MenuItem,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; 
 import AppTheme from "../../theme/AppTheme";
+import { useAuthStore } from "../../stores/authStore.jsx";
+import api from "../../api.js"; 
 
 const Navpages = [
   { label: "OpenStore", to: "/openstore", index: "1" },
@@ -26,12 +28,26 @@ export default function ResponsiveAppBar() {
   const openNav = (e) => setAnchorElNav(e.currentTarget);
   const closeNav = () => setAnchorElNav(null);
 
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => !!state.token);
+  const user = useAuthStore((state) => state.user); 
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/users/logout");
+    } catch (error) {
+      console.error("Logout API failed, clearing auth locally.", error);
+    }
+    clearAuth();
+    navigate("/");
+  };
+
   return (
     <AppTheme>
       <AppBar position="static" sx={{ bgcolor: "" }}>
         <Container maxWidth="xl">
           <Toolbar>
-            {/* มือถือ: Hamburger ของ Navpages */}
             <Box
               sx={{
                 display: {
@@ -63,7 +79,7 @@ export default function ResponsiveAppBar() {
                     key={p.index}
                     onClick={closeNav}
                     component={Link}
-                    to={p.index}
+                    to={p.to}
                     sx={{ fontFamily: "Inter", fontSize: 14 }}
                   >
                     {p.label}
@@ -71,10 +87,10 @@ export default function ResponsiveAppBar() {
                 ))}
               </Menu>
             </Box>
-            {/* เดสก์ท็อป: เมนูตรงกลาง */}
+
             <Box
               sx={{
-                flexGrow: 1, // กินพื้นที่กลาง
+                flexGrow: 1,
                 display: { xs: "none", md: "flex" },
                 gap: 10,
                 justifyContent: "start",
@@ -96,31 +112,49 @@ export default function ResponsiveAppBar() {
                 </Button>
               ))}
             </Box>
-            {/* ขวาสุด: ปุ่ม Auth */}
+
             <Box
               sx={{
                 ml: "auto",
                 display: "flex",
                 gap: 2,
+                alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Button
-                component={Link}
-                to={"register"}
-                variant="outlined"
-                sx={{ color: "white", borderColor: "white" }}
-              >
-                Register
-              </Button>
-              <Button
-                component={Link}
-                to={"Login"}
-                variant="outlined"
-                sx={{ color: "white", borderColor: "white" }}
-              >
-                Login
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Typography sx={{ color: "white", fontSize: 16 }}>
+                    สวัสดี, {user?.sub}
+                  </Typography>
+                  <Button
+                    onClick={handleLogout}
+                    variant="outlined"
+                    sx={{ color: "white", borderColor: "white" }}
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    component={Link}
+                    to={"register"}
+                    variant="outlined"
+                    sx={{ color: "white", borderColor: "white" }}
+                  >
+                    Register
+                  </Button>
+                  <Button
+                    component={Link}
+                    to={"login"}
+                    variant="outlined"
+                    sx={{ color: "white", borderColor: "white" }}
+                  >
+                    Login
+                  </Button>
+                </>
+              )}
             </Box>
           </Toolbar>
         </Container>

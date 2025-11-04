@@ -1,0 +1,67 @@
+ <Box
+          ref={ref}
+          sx={{
+            overflowX: "auto",
+            overflowY: "hidden",
+            px: { xs: 1, sm: 0 },
+            scrollBehavior: "smooth",
+            "&::-webkit-scrollbar": { height: 8 },
+            "&::-webkit-scrollbar-thumb": {
+              bgcolor: "divider",
+            },
+
+            // display: "grid",
+            // gridAutoFlow: "column",
+            // gridTemplateRows: "repeat(2, 1fr)", // 2 แถว
+            // gridAutoColumns: { xs: "127px", sm: "155px", md: "192px" }, // ความกว้างการ์ดแต่ละคอลัมน์
+            // gap: {}, // ช่องว่าง
+            // alignItems: "stretch",
+            // minHeight: { xs: 280, sm: 300 }, // ความสูงบล็อกรวม (ปรับได้)
+          }}
+        >
+          {/* {CATEGORIES.map((c) => (
+            <Card
+              key={c.id}
+              variant="outlined"
+              sx={{
+                height: "100%",
+                display: "flex-1",
+                flexDirection: "column",
+                borderRadius: 0, // <<< ทำมุมเหลี่ยม
+                boxShadow: "none", // (ตัวเลือก) ตัดเงาออกให้ดูเป็นกริดเรียบ
+                overflow: "hidden", // (แนะนำ) กันลูกที่อยู่ข้างในล้นมุม
+              }}
+              // square               // (อีกวิธี) ใช้ prop ของ Paper ก็ได้
+            >
+              <CardActionArea
+                sx={{ height: "100%" }}
+                onClick={() => console.log("clicked", c)}
+              >
+                <CardMedia
+                  component="img"
+                  image={c.image}
+                  alt={c.name}
+                  sx={{
+                    width: 76,
+                    height: 76,
+                    borderRadius: "10px", // รูปจะยังโค้งได้เอง (ถ้าอยากเหลี่ยมให้เปลี่ยนเป็น 0)
+                    mx: "auto",
+                    mt: 2,
+                    objectFit: "cover",
+                    bgcolor: "grey.100",
+                  }}
+                />
+                <CardContent sx={{ px: 1.5, pb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    align="center"
+                    sx={{ lineHeight: 1.2 }}
+                  >
+                    {c.name}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          ))} */}
+          <AllCategories />
+        </Box>
