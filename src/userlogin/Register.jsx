@@ -11,27 +11,27 @@ import {
 import AppTheme from "../theme/AppTheme";
 import { useNavigate } from "react-router-dom";
 
-// 1. 🔽 (สำคัญ) ตั้งค่า URL ของ API ที่คุณใช้
+// 1. (สำคัญ) ตั้งค่า URL ของ API
 const API_URL = "https://great-lobster-rightly.ngrok-free.app";
 
 export default function Register() {
   const navigate = useNavigate();
 
-  // 2. 🔽 สร้าง State สำหรับเก็บค่าในฟอร์มทั้งหมด
+  // 2. สร้าง State สำหรับเก็บค่าในฟอร์มทั้งหมด
   const [formData, setFormData] = React.useState({
     Email: "",
     Username: "",
     Name: "",
-    Phone: "", // 👈 (Model ของคุณมี Phone)
+    Phone: "", // (Backend Model (UserBase) มี Phone)
     Password: "",
     ConfirmPassword: "",
   });
 
-  // 3. 🔽 สร้าง Stateสำหรับ loading และ error
+  // 3. สร้าง State สำหรับ loading และ error
   const [error, setError] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
 
-  // 4. 🔽 ฟังก์ชันเมื่อพิมพ์ในฟอร์ม
+  // 4. ฟังก์ชันเมื่อพิมพ์ในฟอร์ม
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -40,12 +40,12 @@ export default function Register() {
     }));
   };
 
-  // 5. 🔽 สร้างฟังก์ชันสำหรับยิง API Register
+  // 5. สร้างฟังก์ชันสำหรับยิง API Register
   const handleRegister = async (e) => {
-    e.preventDefault(); // กันหน้าเว็บ refresh
+    e.preventDefault(); 
     setError(null);
 
-    // 6. 🔽 ตรวจสอบฟอร์ม (ง่ายๆ)
+    // 6. ตรวจสอบฟอร์ม (ง่ายๆ)
     if (formData.Password !== formData.ConfirmPassword) {
       setError("รหัสผ่านไม่ตรงกัน");
       return;
@@ -54,12 +54,12 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // 7. 🔽 สร้าง Body (JSON) ให้ตรงกับ Model 'UserCreate' ของ Backend
+      // 7. สร้าง Body (JSON) ให้ตรงกับ Model 'UserCreate'
       const body = {
         Username: formData.Username,
         Name: formData.Name,
         Email: formData.Email,
-        Phone: formData.Phone, // 👈 (เพิ่ม Phone)
+        Phone: formData.Phone,
         Password: formData.Password,
       };
 
@@ -67,7 +67,7 @@ export default function Register() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true", // (Header สำหรับ ngrok)
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify(body),
       });
@@ -75,14 +75,13 @@ export default function Register() {
       const data = await res.json();
 
       if (!res.ok) {
-        // ถ้า API ตอบ Error (เช่น 400 Username ซ้ำ)
         throw new Error(data.detail || `HTTP Error ${res.status}`);
       }
 
-      // 8. 🔽 สมัครสมาชิกสำเร็จ!
+      // 8. สมัครสมาชิกสำเร็จ!
       console.log("Register success:", data);
       
-      // 9. 🔽 บอก User และพาไปหน้า Login
+      // 9. บอก User และพาไปหน้า Login
       alert("สมัครสมาชิกสำเร็จ! กรุณา Login");
       navigate("/login", { replace: true });
 
@@ -97,8 +96,8 @@ export default function Register() {
   return (
     <AppTheme>
       <Box
-        component="form" // 👈 เปลี่ยนเป็น <form>
-        onSubmit={handleRegister} // 👈 ใช้ onSubmit
+        component="form" 
+        onSubmit={handleRegister} 
         sx={{
           p: "2rem",
           maxWidth: 600,
@@ -109,12 +108,11 @@ export default function Register() {
           bgcolor: "white",
         }}
       >
-        <Stack spacing={3} useFlexGap> {/* 👈 (แก้ spacing 4 -> 3) */}
+        <Stack spacing={3} useFlexGap> {/* (ปรับ Spacing) */}
           <Typography variant="h1" sx={{ fontSize: "2rem", fontWeight: 500 }}>
             Sign in (Register)
           </Typography>
 
-          {/* 10. 🔽 แสดง Error (ถ้ามี) */}
           {error && (
             <Alert severity="error" onClose={() => setError(null)}>
               {error}
@@ -195,7 +193,7 @@ export default function Register() {
             disabled={loading}
           />
           <Button
-            type="submit" // 👈 เปลี่ยนเป็น type submit
+            type="submit"
             variant="contained"
             size="large"
             disabled={loading}
