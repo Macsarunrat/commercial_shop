@@ -201,3 +201,20 @@ def get_order_details_for_shop(db: Session, order_id: int, shop_id: int) -> Shop
         Items=public_items_list,
         Total_Price_For_Shop=total_price_for_shop
     )
+
+
+def get_shop_details_by_id(db: Session, shop_id: int) -> Shop | None:
+    """
+    [SYNC] ดึงข้อมูลรายละเอียดพื้นฐานของร้านค้าจาก ID (พร้อม Join รูปภาพปก)
+    """
+    
+    # 📌 Note: ใช้ select(Shop) และ .options(joinedload(...)) เพื่อดึงข้อมูล Relationship
+    stmt = (
+        select(Shop)
+        .where(Shop.Shop_ID == shop_id)
+        # ⭐️ Eager Load รูปปกมาด้วย
+        .options(joinedload(Shop.cover_image))
+    )
+    
+    # ⭐️ ใช้ db.exec() ปกติ (ไม่ต้องใช้ await)
+    return db.exec(stmt).first()

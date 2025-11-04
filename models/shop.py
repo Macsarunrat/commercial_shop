@@ -89,3 +89,5 @@ class ShopPublicCard(SQLModel):
     Shop_Name: str
     Shop_Phone: Optional[str] = None # 👈 (เพิ่ม Optional[str] = None ดีกว่า)
     Cover_Img_Url: Optional[str] = None
+
+
