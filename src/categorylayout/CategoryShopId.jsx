@@ -497,7 +497,7 @@ export default function CategoryShopId() {
         {/* ขวา: สินค้าในหมวด/แบรนด์นี้ */}
         <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           <Typography variant="h5" sx={{ pl: { xs: 0, md: 2 } }}>
-            {selectedBrandName || categoryName}
+            {selectedBrandName}
           </Typography>
 
           <Box
