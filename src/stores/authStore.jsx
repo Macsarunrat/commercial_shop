@@ -13,12 +13,6 @@ export const useAuthStore = create(
       token: null,  // This will hold the raw JWT string
       user: null,   // This will hold the decoded user info (e.g., { sub: "customer1", exp: ... })
 
-      // --- ACTIONS ---
-      /**
-       * (Called by Login page)
-       * Saves the token to state and localStorage.
-       * Decodes the token to save user info.
-       */
       setToken: (tokenString) => {
         try {
           // 1. Decode the token to get user info and expiration
