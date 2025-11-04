@@ -19,6 +19,7 @@ import Ordered from "./component/Ordered.jsx";
 import StoreShowUI from "./shopui/StoreShowUI.jsx";
 import SearchItem from "./Search/SearchItem.jsx";
 import CategoryById from "./categorylayout/CategoryById.jsx";
+import Help from "./component/Help.jsx";
 
 const router = createBrowserRouter([
   {
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: "search",
         element: <SearchItem />,
+      },
+      {
+        path: "help",
+        element: <Help />,
       },
     ],
   },

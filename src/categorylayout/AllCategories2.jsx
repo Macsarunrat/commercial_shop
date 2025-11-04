@@ -86,6 +86,7 @@ export default function AllCategories() {
           method: "GET",
           headers: {
             "ngrok-skip-browser-warning": "true",
+            credentials: "include",
           },
         }
       );
