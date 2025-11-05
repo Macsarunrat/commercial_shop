@@ -278,7 +278,8 @@ export default function AddressUser({ onSelect, compact = true }) {
     try {
       // ฝั่งเซิร์ฟเวอร์ต้องการ User_ID
       const uid = Number(userId);
-      if (!uid) throw new Error("ไม่พบ User_ID ของผู้ใช้ (โปรดลองล็อกอินใหม่)");
+      if (!uid)
+        throw new Error("กรุณาล็อกอินเพื่อก่อนเพื่อจะสามารถเพิ่มที่อยู่ได้");
       payload.User_ID = uid;
 
       const res = await fetch(`${API}/user-address/`, {
@@ -294,7 +295,7 @@ export default function AddressUser({ onSelect, compact = true }) {
       await load();
       setDlgOpen(false);
     } catch (e) {
-      alert(`เพิ่มที่อยู่ไม่สำเร็จ:\n${e.message}`);
+      alert(`เพิ่มที่อยู่ไม่สำเร็จ:${e.message}`);
       console.error("POST /user-address/ failed", e);
     } finally {
       setDlgBusy(false);
@@ -375,15 +376,9 @@ export default function AddressUser({ onSelect, compact = true }) {
           </Button>
         </Stack>
 
-        {err && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {err}
-          </Alert>
-        )}
-
         {!userId && (
           <Alert severity="info" sx={{ mb: 2 }}>
-            กำลังตรวจสอบข้อมูลผู้ใช้… (จำเป็นต้องทราบ User_ID เพื่อเพิ่มที่อยู่)
+            กำลังตรวจสอบข้อมูลผู้ใช้…กรุณาล็อกอินเพื่อเข้าใช้งานร้านค้าและย้อนกลับยังหน้าอื่น
           </Alert>
         )}
 
