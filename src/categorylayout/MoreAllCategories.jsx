@@ -8,16 +8,11 @@ import {
   CardMedia,
   Typography,
 } from "@mui/material";
+import { Link } from "react-router-dom";
 import Banner from "../nav/component/Bannner";
 import AppTheme from "../theme/AppTheme";
 
-const DEMO = Array.from({ length: 24 }).map((_, i) => ({
-  id: i + 1,
-  name: `Category ${i + 1}`,
-  image: "/placeholder.png",
-}));
-
-// Img import //
+/* ---------------- Images ---------------- */
 import bag from "../img/Gemini/bagG.png";
 import bodylotion from "../img/Gemini/skincareG.png";
 import book from "../img/Gemini/bookG.png";
@@ -36,7 +31,8 @@ import shoe from "../img/Gemini/shoeG.png";
 import sport from "../img/Gemini/sportG.png";
 import toy from "../img/Gemini/toyG.png";
 import tv from "../img/Gemini/tvG.png";
-// img import //
+
+/* -------------- Icon mapping -------------- */
 const objectall = [
   { id: 1, name: "cloths", img: cloth },
   { id: 2, name: "pants", img: pant },
@@ -57,8 +53,19 @@ const objectall = [
   { id: 17, name: "bookBooks&stationery", img: book },
   { id: 18, name: "foods&drinks", img: food },
 ];
+const iconMap = new Map(objectall.map((o) => [String(o.id), o]));
 
+/* -------------- API config -------------- */
+const API = "https://great-lobster-rightly.ngrok-free.app";
+const HDRS = { "ngrok-skip-browser-warning": "true" };
+
+/* -------------- Card -------------- */
 function CategoryCard({ c }) {
+  // รองรับทั้งข้อมูลจาก API ({Category_ID, Category_Name}) และ fallback อื่น ๆ
+  const id = c?.Category_ID ?? c?.id;
+  const label = c?.Category_Name ?? c?.name ?? "";
+  const icon = iconMap.get(String(id));
+
   return (
     <AppTheme>
       <Card
@@ -71,7 +78,12 @@ function CategoryCard({ c }) {
           flexDirection: "column",
         }}
       >
-        <CardActionArea onClick={() => console.log("clicked:", c)}>
+        <CardActionArea
+          component={Link}
+          to={`/categoryitems/${id}`}
+          state={{ name: label }}
+          sx={{ height: "100%" }}
+        >
           <Box
             sx={{
               width: 120,
@@ -86,8 +98,8 @@ function CategoryCard({ c }) {
           >
             <CardMedia
               component="img"
-              src={c.img}
-              alt={c.name}
+              src={icon?.img ?? bag}
+              alt={icon?.name ?? label}
               sx={{ width: 100, height: 100, objectFit: "contain" }}
             />
           </Box>
@@ -100,12 +112,12 @@ function CategoryCard({ c }) {
                 lineHeight: 1.25,
                 minHeight: 36,
                 maxHeight: 36,
-
                 overflow: "hidden",
                 fontSize: 16,
               }}
+              title={label}
             >
-              {c.name}
+              {label}
             </Typography>
           </CardContent>
         </CardActionArea>
@@ -114,8 +126,34 @@ function CategoryCard({ c }) {
   );
 }
 
-export default function AllCategories({ items = objectall }) {
-  // แสดงเป็นกริด 5 คอลัมน์ ไม่มีปุ่ม/ไม่มีสกรอล
+/* -------------- Page -------------- */
+export default function AllCategories() {
+  const [items, setItems] = React.useState([]);
+  const [error, setError] = React.useState("");
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        setError("");
+        const res = await fetch(`${API}/category/`, {
+          method: "GET",
+          headers: HDRS,
+          credentials: "include", // สำคัญ: ให้ส่งคุกกี้ (ถ้ามี)
+          signal: ac.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+        setError("โหลดหมวดหมู่ไม่สำเร็จ");
+        setItems([]);
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
   return (
     <>
       <Banner />
@@ -128,20 +166,33 @@ export default function AllCategories({ items = objectall }) {
           mt: 5,
         }}
       >
+        {/* คุณยังคงเพิ่มหัวข้อ/ข้อความอื่น ๆ ได้ตามต้องการ */}
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(0, 1fr))", // ⬅️ แถวละ 5 การ์ด
+            gridTemplateColumns: "repeat(5, minmax(0, 1fr))", // แถวละ 5 การ์ด (เลย์เอาต์เดิม)
+            gap: 0,
             mt: 2,
-            overflow: "hidden", // กันแถบสกรอล
+            overflow: "hidden",
           }}
         >
-          {items.map((c) => (
-            <Box key={c.id}>
+          {(items.length ? items : []).map((c) => (
+            <Box key={c?.Category_ID ?? c?.id ?? Math.random()}>
               <CategoryCard c={c} />
             </Box>
           ))}
         </Box>
+
+        {/* แสดงข้อความผิดพลาดแบบไม่เกะกะเลย์เอาต์ */}
+        {!!error && (
+          <Typography
+            variant="body2"
+            color="error"
+            sx={{ mt: 2, textAlign: "center" }}
+          >
+            {error}
+          </Typography>
+        )}
       </Box>
     </>
   );

@@ -43,15 +43,15 @@ async function readNiceError(res) {
   } catch {}
   return `HTTP ${res.status}`;
 }
-async function fjson(input, init) {
-  const res = await fetch(input, init);
-  if (!res.ok) throw new Error(await readNiceError(res));
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
+// async function fjson(input, init) {
+//   const res = await fetch(input, init);
+//   if (!res.ok) throw new Error(await readNiceError(res));
+//   try {
+//     return await res.json();
+//   } catch {
+//     return null;
+//   }
+// }
 
 /* ---------------- component ---------------- */
 export default function Bar() {
@@ -68,38 +68,36 @@ export default function Bar() {
   const openNav = (e) => setAnchorElNav(e.currentTarget);
   const closeNav = () => setAnchorElNav(null);
 
-  // nav state
+  // มี/ไม่มีร้าน (ยังเก็บไว้เผื่ออยากใช้ในอนาคต แต่จะไม่ล็อกเมนูแล้ว)
   const [hasShop, setHasShop] = React.useState(
     typeof window !== "undefined"
       ? localStorage.getItem("hasShop") === "1"
       : false
   );
+
+  // โหมดเมนู: buyer | seller (ใช้ตัวนี้ล้วน ๆ เพื่อกำหนดเมนู)
   const [mode, setMode] = React.useState(
     typeof window !== "undefined"
       ? localStorage.getItem("navMode") || "buyer"
       : "buyer"
   );
 
-  // เมื่อ login แล้ว ลองเช็คว่ามีร้านหรือยัง
+  // หลัง login ลองเช็คว่ามีร้านไหม (เก็บสถานะไว้เฉย ๆ ไม่เอามาใช้บังเมนูอีก)
   React.useEffect(() => {
     let cancelled = false;
-
     (async () => {
       if (!token) {
         if (!cancelled) {
           setHasShop(false);
           setMode("buyer");
-          if (typeof window !== "undefined") {
-            localStorage.setItem("hasShop", "0");
-            localStorage.setItem("navMode", "buyer");
-          }
+          localStorage.setItem("hasShop", "0");
+          localStorage.setItem("navMode", "buyer");
         }
         return;
       }
       try {
         const data = await fjson(`${API}/shops/my`, {
           headers: authHeaders(token),
-          credentials: "include",
         });
         const rows = Array.isArray(data)
           ? data
@@ -107,45 +105,40 @@ export default function Bar() {
         const owned = rows.length > 0;
         if (!cancelled) {
           setHasShop(owned);
-          // ไม่มีร้าน = บังคับโหมด buyer
-          if (!owned) {
-            setMode("buyer");
-          }
-          if (typeof window !== "undefined") {
-            localStorage.setItem("hasShop", owned ? "1" : "0");
-            if (!owned) localStorage.setItem("navMode", "buyer");
-          }
+          localStorage.setItem("hasShop", owned ? "1" : "0");
         }
       } catch {
-        // ถ้าดึงไม่ได้ ไม่เปลี่ยนค่าเดิม
+        // เงียบไว้
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [token]);
 
-  // ฟังการเปลี่ยน localStorage (เช่นจาก OpenStore ยิง storage event)
+  // sync กับ localStorage (กรณีอีกแท็บเปลี่ยน)
   React.useEffect(() => {
     const onStorage = () => {
       const hs = localStorage.getItem("hasShop") === "1";
       const md = localStorage.getItem("navMode") || "buyer";
       setHasShop(hs);
-      setMode(hs ? md : "buyer");
+      setMode(md);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // สลับโหมด
+  // สลับโหมด UI (ไม่พาไปหน้าใด ๆ)
   const toggleMode = () => {
-    if (!hasShop) return;
     const next = mode === "seller" ? "buyer" : "seller";
     setMode(next);
     localStorage.setItem("navMode", next);
-    // แจ้งให้แท็บ/คอมโพเนนท์อื่นทราบทันที
     window.dispatchEvent(new Event("storage"));
+  };
+
+  // ปุ่ม SwitchMode (เดสก์ท็อป/โมบายใช้ตัวเดียว)
+  const handleSwitchClick = () => {
+    toggleMode();
   };
 
   // logout
@@ -154,7 +147,6 @@ export default function Bar() {
       await fetch(`${API}/users/logout`, {
         method: "POST",
         headers: authHeaders(token),
-        credentials: "include",
       }).catch(() => {});
     } catch {}
     clearAuth();
@@ -166,19 +158,19 @@ export default function Bar() {
 
   // เมนู 2 โหมด
   const buyerNav = [
-    { label: "OpenStore", to: "/openstore", key: "openstore" },
+    { label: "OpenStore", to: "/myshop", key: "openstore" },
     { label: "Shop", to: "/allsh", key: "shop" },
     { label: "Ordered", to: "/ordered", key: "ordered" },
     { label: "Help", to: "/help", key: "help" },
   ];
-
   const sellerNav = [
     { label: "MyShopInfo", to: "/myshop", key: "myshop" },
-    { label: "ManageShop", to: "/manage-shop", key: "manage" },
+    { label: "ManageShop", to: "/manage", key: "manage" },
     { label: "MyOrder", to: "/shop-orders", key: "orders" },
   ];
 
-  const pages = mode === "seller" && hasShop ? sellerNav : buyerNav;
+  // ✅ เลือกเมนูตาม mode เพียงอย่างเดียว
+  const pages = mode === "seller" ? sellerNav : buyerNav;
 
   return (
     <AppTheme>
@@ -216,11 +208,12 @@ export default function Bar() {
                     {p.label}
                   </MenuItem>
                 ))}
-                {hasShop && (
+
+                {isAuthenticated && (
                   <MenuItem
                     onClick={() => {
                       closeNav();
-                      toggleMode();
+                      handleSwitchClick();
                     }}
                   >
                     {mode === "seller" ? "Switch to Buyer" : "Switch to Seller"}
@@ -254,9 +247,9 @@ export default function Bar() {
                 </Button>
               ))}
 
-              {hasShop && (
+              {isAuthenticated && (
                 <Button
-                  onClick={toggleMode}
+                  onClick={handleSwitchClick}
                   sx={{
                     color: "white",
                     fontFamily: "Prompt",

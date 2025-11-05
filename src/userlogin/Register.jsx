@@ -22,7 +22,7 @@ export default function Register() {
     Email: "",
     Username: "",
     Name: "",
-    Phone: "", // (Backend Model (UserBase) มี Phone)
+    Phone: "", // ต้องเป็นตัวเลข 10 หลัก
     Password: "",
     ConfirmPassword: "",
   });
@@ -31,21 +31,37 @@ export default function Register() {
   const [error, setError] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
 
-  // 4. ฟังก์ชันเมื่อพิมพ์ในฟอร์ม
+  // 4. ฟังก์ชันเมื่อพิมพ์ในฟอร์ม (กรอง Phone ให้เป็นตัวเลขและไม่เกิน 10 หลัก)
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    let next = value;
+    if (name === "Phone") {
+      // เอาเฉพาะตัวเลข และจำกัดความยาวแค่ 10
+      next = value.replace(/\D/g, "").slice(0, 10);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: next,
     }));
   };
 
+  // ตัวแปรตรวจสอบเบอร์: ต้องเป็นตัวเลข 10 หลัก
+  const isPhoneValid = /^\d{10}$/.test(formData.Phone);
+
   // 5. สร้างฟังก์ชันสำหรับยิง API Register
   const handleRegister = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setError(null);
 
-    // 6. ตรวจสอบฟอร์ม (ง่ายๆ)
+    // ตรวจสอบเบอร์โทรก่อนส่ง
+    if (!isPhoneValid) {
+      setError("เบอร์โทรต้องเป็นตัวเลข 10 หลักเท่านั้น");
+      return;
+    }
+
+    // 6. ตรวจสอบฟอร์ม (รหัสผ่านตรงกัน)
     if (formData.Password !== formData.ConfirmPassword) {
       setError("รหัสผ่านไม่ตรงกัน");
       return;
@@ -80,11 +96,10 @@ export default function Register() {
 
       // 8. สมัครสมาชิกสำเร็จ!
       console.log("Register success:", data);
-      
+
       // 9. บอก User และพาไปหน้า Login
       alert("สมัครสมาชิกสำเร็จ! กรุณา Login");
       navigate("/login", { replace: true });
-
     } catch (err) {
       console.error("Register failed:", err.message);
       setError(err.message || "An unknown error occurred.");
@@ -96,8 +111,8 @@ export default function Register() {
   return (
     <AppTheme>
       <Box
-        component="form" 
-        onSubmit={handleRegister} 
+        component="form"
+        onSubmit={handleRegister}
         sx={{
           p: "2rem",
           maxWidth: 600,
@@ -108,7 +123,8 @@ export default function Register() {
           bgcolor: "white",
         }}
       >
-        <Stack spacing={3} useFlexGap> {/* (ปรับ Spacing) */}
+        <Stack spacing={3} useFlexGap>
+          {/* (ปรับ Spacing) */}
           <Typography variant="h1" sx={{ fontSize: "2rem", fontWeight: 500 }}>
             Sign in (Register)
           </Typography>
@@ -131,6 +147,7 @@ export default function Register() {
             variant="outlined"
             disabled={loading}
           />
+
           <TextField
             id="Email"
             label="Email"
@@ -139,11 +156,14 @@ export default function Register() {
             value={formData.Email}
             onChange={handleChange}
             autoComplete="email"
+            placeholder="Ex..Welovebug@gmail.com"
             required
             fullWidth
             variant="outlined"
             disabled={loading}
           />
+
+          {/* เบอร์โทร: validate = ตัวเลขเท่านั้น & ต้องยาว 10 หลัก */}
           <TextField
             id="Phone"
             label="Phone (เบอร์โทร)"
@@ -152,9 +172,16 @@ export default function Register() {
             onChange={handleChange}
             required
             fullWidth
+            placeholder="กรุณากรอกเบอร์มือถือเป็นตัวเลข 10 หลัก"
             variant="outlined"
             disabled={loading}
+            slotProps={{
+              inputMode: "numeric", // เปิดคีย์บอร์ดตัวเลขบนมือถือ
+              pattern: "\\d{10}", // native validation เสริม
+              maxLength: 10, // กันยาวเกิน 10
+            }}
           />
+
           <TextField
             id="username"
             label="Username (ชื่อผู้ใช้)"
@@ -166,6 +193,7 @@ export default function Register() {
             variant="outlined"
             disabled={loading}
           />
+
           <TextField
             id="password"
             label="Password"
@@ -179,6 +207,7 @@ export default function Register() {
             variant="outlined"
             disabled={loading}
           />
+
           <TextField
             id="confirmpassword"
             label="Confirm Password"
@@ -192,16 +221,21 @@ export default function Register() {
             variant="outlined"
             disabled={loading}
           />
+
           <Button
             type="submit"
             variant="contained"
             size="large"
-            disabled={loading}
+            disabled={loading || !isPhoneValid}
             sx={{ fontSize: "1.5rem", minHeight: 56 }}
           >
-            {loading ? <CircularProgress size={28} color="inherit" /> : "SIGN IN"}
+            {loading ? (
+              <CircularProgress size={28} color="inherit" />
+            ) : (
+              "SIGN IN"
+            )}
           </Button>
-          
+
           <Box sx={{ textAlign: "center", mt: 2 }}>
             มีบัญชีอยู่แล้ว?{" "}
             <Button
