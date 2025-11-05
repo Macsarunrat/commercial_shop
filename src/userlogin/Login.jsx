@@ -69,11 +69,7 @@ export default function Login() {
         setToken(data.access_token);
       }
 
-      navigate("/", { 
-        replace: true, 
-        state: { message: "เข้าสู่ระบบสำเร็จ!" } 
-      });
-      
+      navigate("/", { replace: true });
     } catch (err) {
       console.error("Login failed:", err);
       setError(err?.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");

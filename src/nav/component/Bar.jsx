@@ -161,11 +161,7 @@ export default function Bar() {
     localStorage.setItem("hasShop", "0");
     localStorage.setItem("navMode", "buyer");
     window.dispatchEvent(new Event("storage"));
-    
-    navigate("/", { 
-      replace: true, 
-      state: { message: "ออกจากระบบสำเร็จ!" } 
-    });
+    navigate("/", { replace: true });
   };
 
   // เมนู 2 โหมด
