@@ -21,7 +21,7 @@ import { useAuthStore } from "../stores/authStore";
 // ✅ ไม่ต้อง import server API ตรง ๆ แล้ว ให้ใช้ผ่าน store เท่านั้น
 // import { updateCartItemServer, removeCartItemServer } from "../cart/cartCon.jsx";
 
-export default function CartMui() {
+export default function CartMui({ canCheckout, selectedAddress }) {
   const navigate = useNavigate();
 
   // ----- Cart store -----
@@ -67,6 +67,24 @@ export default function CartMui() {
     } finally {
       setUpdating((p) => ({ ...p, [sellId]: false }));
     }
+  };
+
+  const handleCheckout = () => {
+    if (!canCheckout) {
+      alert("กรุณาเพิ่มและเลือกที่อยู่จัดส่งก่อนดำเนินการชำระเงิน");
+      return;
+    }
+    // ... logic เดิม เช่น navigate ไปหน้า Ordered
+    navigate("/ordered", {
+      state: {
+        // ส่ง summary ที่หน้า Ordered ใช้ render ได้เลย
+        items,
+        subtotal: totalPrice,
+        shipping: 0,
+        paymentMethod: "Mobile Banking", // จะให้เปลี่ยนในหน้านี้ก็ได้
+        address: selectedAddress,
+      },
+    });
   };
 
   // ----- Remove item (optimistic update) -----
@@ -142,7 +160,7 @@ export default function CartMui() {
             </Typography>
             <Button
               variant="contained"
-              onClick={() => navigate("/shop")}
+              onClick={() => navigate("/")}
               sx={{ mt: 3 }}
             >
               เริ่มช้อปปิ้ง
@@ -309,18 +327,25 @@ export default function CartMui() {
             <Button
               variant="contained"
               size="large"
+              color="error"
               fullWidth
               sx={{ mt: 3 }}
-              onClick={() => navigate("/checkout")}
+              onClick={handleCheckout}
+              disabled={!canCheckout}
             >
               ดำเนินการชำระเงิน
             </Button>
+            {!canCheckout && (
+              <p style={{ color: "#f44336", marginTop: 8 }}>
+                กรุณาเพิ่มและเลือกที่อยู่จัดส่งก่อน
+              </p>
+            )}
             <Button
               variant="outlined"
               size="large"
               fullWidth
               sx={{ mt: 2 }}
-              onClick={() => navigate("/shop")}
+              onClick={() => navigate("/")}
             >
               เลือกซื้อสินค้าต่อ
             </Button>

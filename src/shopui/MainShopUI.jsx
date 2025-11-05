@@ -14,6 +14,8 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import Skeleton from "@mui/material/Skeleton";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import ShopIcon from "./ShopIcon";
+
 import {
   useLocation,
   useParams,
@@ -22,7 +24,7 @@ import {
 } from "react-router-dom";
 
 import AppTheme from "../theme/AppTheme";
-import ShopIcon from "./ShopIcon";
+import AllShopUI from "./AllShopUI";
 import useCartStore from "../stores/cartStore"; // ใช้เฉพาะ fetchCart (ไม่เรียก addItem เพื่อลด double-post)
 import { addToCartServer } from "../cart/cartCon"; // ยิงหลังบ้านจริง
 import { useAuthStore } from "../stores/authStore"; // เช็ค token
@@ -358,7 +360,7 @@ export default function MainShopUI() {
         </Card>
 
         {/* สินค้าอื่นในหมวดเดียวกัน */}
-        <ShopIcon shopId={shopId} categoryId={categoryId} />
+        <ShopIcon shopId={product?.shopId ?? null} />
 
         {/* แจ้งผล */}
         <Snackbar

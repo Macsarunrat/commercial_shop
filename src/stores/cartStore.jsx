@@ -1,35 +1,36 @@
 // src/stores/cartStore.jsx
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import api from "../api.js"; // axios instance ที่ใส่ baseURL/headers/token ไว้แล้ว
+import api from "../api.js";
 
 const withDevtools = (fn) =>
   typeof window !== "undefined" ? devtools(fn, { name: "cart-store" }) : fn;
 
-/** map payload จาก API -> โครงสร้าง state ภายใน */
 function mapApiItemToLocal(row) {
-  // รองรับทั้งรูปแบบ { Quantity, ItemDetails: {...} } และ fallback ง่าย ๆ
   const it = row?.ItemDetails ?? row?.item ?? null;
   if (!it) return null;
-
   const toNum = (v) => Number(String(v ?? "0").replace(/,/g, "")) || 0;
-
   return {
-    id: it.Sell_ID ?? it.sell_id ?? it.id, // เก็บเป็น Sell_ID
+    id: it.Sell_ID ?? it.sell_id ?? it.id,
     name: it.Product_Name ?? it.name ?? "Unnamed",
     price: toNum(it.Price ?? it.price),
     stock: toNum(it.Stock ?? it.stock),
     image: it.Cover_Image ?? it.image ?? "/IMG1/bagG.png",
     qty: toNum(row?.Quantity ?? row?.qty),
+    ShopId: it.Shop_ID ?? it.shop_id ?? null, // เก็บไว้ถ้ามี
   };
 }
 
 const useCartStore = create(
   withDevtools((set, get) => ({
     // ----- STATE -----
-    items: [], // [{id, name, price, stock, image, qty}]
+    items: [],
     isLoading: false,
     error: null,
+
+    // แผนที่จาก Sell_ID -> { shopId, shopName }
+    // เก็บเป็น object ธรรมดาเพื่อ serialize ง่าย
+    sellToShopMap: {},
 
     // ----- SELECTORS -----
     cartCount: () => get().items.reduce((n, it) => n + (it.qty || 0), 0),
@@ -37,9 +38,21 @@ const useCartStore = create(
     cartTotal: () =>
       get().items.reduce((sum, it) => sum + (it.price || 0) * (it.qty || 0), 0),
 
-    // ----- ACTIONS (CRUD กับ backend) -----
+    // หาชื่อร้านจาก sellId (ให้หน้า Ordered ใช้)
+    getShopNameBySellId: (sellId) => {
+      const m = get().sellToShopMap || {};
+      const rec = m[String(sellId)];
+      return rec?.shopName || null;
+    },
+    getShopIdBySellId: (sellId) => {
+      const m = get().sellToShopMap || {};
+      const rec = m[String(sellId)];
+      return rec?.shopId || null;
+    },
 
-    /** GET /cart/ : ดึงตะกร้าจากเซิร์ฟเวอร์มาใส่ state */
+    // ----- ACTIONS -----
+
+    /** โหลดตะกร้า */
     fetchCart: async () => {
       set({ isLoading: true, error: null });
       try {
@@ -53,10 +66,7 @@ const useCartStore = create(
       }
     },
 
-    /**
-     * POST /cart/ : เพิ่มสินค้าลงตะกร้า
-     * product: อาจมาจากหลายแหล่ง ให้พยายามอ่าน Sell_ID ให้ได้
-     */
+    /** เพิ่มสินค้า */
     addItem: async (product, qty = 1) => {
       const sellId =
         product?.Sell_ID ?? product?.sellId ?? product?.id ?? product?.sell_id;
@@ -64,15 +74,11 @@ const useCartStore = create(
         console.warn("addItem: missing Sell_ID", product);
         return;
       }
-
       try {
         await api.post("/cart/", {
-          // ตาม Swagger: ต้องใช้ PascalCase
           Sell_ID: Number(sellId),
           Quantity: Number(qty),
         });
-
-        // optimistic update
         set((state) => {
           const idx = state.items.findIndex(
             (p) => String(p.id) === String(sellId)
@@ -80,19 +86,21 @@ const useCartStore = create(
           if (idx === -1) {
             const toNum = (v) =>
               Number(String(v ?? "0").replace(/,/g, "")) || 0;
-            const next = [
-              ...state.items,
-              {
-                id: sellId,
-                name: product?.Product_Name ?? product?.name ?? "Unnamed",
-                price: toNum(product?.Price ?? product?.price),
-                stock: toNum(product?.Stock ?? product?.stock),
-                image:
-                  product?.Cover_Image ?? product?.image ?? "/IMG1/bagG.png",
-                qty: Number(qty),
-              },
-            ];
-            return { items: next };
+            return {
+              items: [
+                ...state.items,
+                {
+                  id: sellId,
+                  name: product?.Product_Name ?? product?.name ?? "Unnamed",
+                  price: toNum(product?.Price ?? product?.price),
+                  stock: toNum(product?.Stock ?? product?.stock),
+                  image:
+                    product?.Cover_Image ?? product?.image ?? "/IMG1/bagG.png",
+                  qty: Number(qty),
+                  ShopId: product?.Shop_ID ?? product?.shop_id ?? null,
+                },
+              ],
+            };
           } else {
             const next = state.items.slice();
             next[idx] = {
@@ -104,15 +112,13 @@ const useCartStore = create(
         });
       } catch (e) {
         console.error("addItem failed:", e);
-        // ถ้าต้อง rollback ให้ fetchCart() อีกครั้งได้
       }
     },
 
-    /** PUT /cart/{sell_id} : เปลี่ยนจำนวน */
+    /** เปลี่ยนจำนวน */
     setItemQty: async (sellId, newQty) => {
       if (!sellId) return;
       if (newQty <= 0) return get().removeItem(sellId);
-
       try {
         await api.put(`/cart/${sellId}`, { Quantity: Number(newQty) });
         set((state) => {
@@ -126,7 +132,7 @@ const useCartStore = create(
       }
     },
 
-    /** DELETE /cart/{sell_id} : ลบรายการ */
+    /** ลบรายการ */
     removeItem: async (sellId) => {
       if (!sellId) return;
       try {
@@ -139,8 +145,34 @@ const useCartStore = create(
       }
     },
 
-    /** เคลียร์ตะกร้าใน state (เช่นบน logout หรือหลัง checkout สำเร็จ) */
+    /** เคลียร์ตะกร้าใน state */
     clearCart: () => set({ items: [] }),
+
+    /**
+     * โหลดแผนที่ Sell_ID -> { shopId, shopName } จาก /store/products
+     * ถ้าอยากโหลดเฉพาะครั้งแรก ให้เรียกก่อนเข้า Ordered.jsx
+     */
+    loadSellToShopMap: async () => {
+      try {
+        const res = await api.get("/store/products");
+        const list = Array.isArray(res.data) ? res.data : res.data?.items ?? [];
+        const map = {};
+        for (const p of list) {
+          const sellId = p.Sell_ID ?? p.sell_id ?? p.id;
+          if (sellId == null) continue;
+          const shopId = p.Shop_ID ?? p.shop_id ?? null;
+          const shopName =
+            p.Shop_Name ?? p.shop_name ?? (shopId ? `Shop #${shopId}` : null);
+          map[String(sellId)] = {
+            shopId: shopId != null ? String(shopId) : null,
+            shopName: shopName || null,
+          };
+        }
+        set({ sellToShopMap: map });
+      } catch (e) {
+        console.error("loadSellToShopMap failed:", e);
+      }
+    },
   }))
 );
 

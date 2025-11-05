@@ -3,19 +3,16 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import CardActionArea from "@mui/material/CardActionArea";
-import Banner from "../nav/component/Bannner";
-import Stack from "@mui/material/Stack";
+
 import Typography from "@mui/material/Typography";
 import AppTheme from "../theme/AppTheme";
 import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
-import Avatar from "@mui/material/Avatar";
+
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
+
 import Skeleton from "@mui/material/Skeleton";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import CircularProgress from "@mui/material/CircularProgress";
+import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 // const API_BASE = "http://localhost:3000/Sell";
 
@@ -168,181 +165,178 @@ const API = "https://great-lobster-rightly.ngrok-free.app";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 // แปลงข้อมูลร้านจาก API → โครงกลางที่ UI ใช้
-function normalizeShop(it) {
-  if (!it) return null;
+function buildQS(obj) {
+  const ent = Object.entries(obj).filter(([, v]) => {
+    if (v == null) return false;
+    const s = String(v).trim();
+    return s !== "" && s.toLowerCase() !== "nan";
+  });
+  return ent.length ? `?${new URLSearchParams(ent).toString()}` : "";
+}
+
+function normalizeShop(s) {
+  if (!s) return null;
   return {
-    shopId: it.Shop_ID ?? it.shop_id ?? null,
-    name: it.Shop_Name ?? it.shop_name ?? "-",
-    phone: it.Shop_Phone ?? it.phone ?? null,
-    cover: it.Cover_Img_Url ?? it.cover ?? null,
+    shopId: s.Shop_ID ?? s.shop_id ?? s.id ?? null,
+    name: s.Shop_Name ?? s.shop_name ?? s.name ?? "Unnamed Shop",
+    phone: s.Shop_Phone ?? s.phone ?? "-",
+    image: s.Cover_Image ?? s.image ?? "/IMG1/bagG.png",
+    owner: s.Owner_Name ?? s.owner_name ?? null,
   };
 }
 
-export default function ShopsGrid() {
+export default function AllShopUI({ shopId: propShopId }) {
+  // ถ้าเปิดจาก route เช่น /shop/:shopId ก็อ่านจาก params ได้
+  const params = useParams();
+  const shopId = propShopId ?? params.shopId ?? null;
+
   const [shops, setShops] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
-  const navigate = useNavigate();
-
-  const goToShop = (shop) => {
-    if (!shop?.shopId) return;
-    navigate(`/shop/${shop.shopId}`);
-  };
+  const [err, setErr] = React.useState(null);
 
   React.useEffect(() => {
     const controller = new AbortController();
     (async () => {
+      setLoading(true);
+      setErr(null);
       try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(`${API}/store/shops`, {
-          signal: controller.signal,
-          headers: HDRS,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const raw = await res.json();
-        const list = (Array.isArray(raw) ? raw : raw?.items ?? [])
-          .map(normalizeShop)
-          .filter(Boolean);
-        setShops(list);
+        // ลอง endpoint ที่มีรายการร้าน
+        const candidates = [`${API}/store/shops`, `${API}/shops`];
+        let list = [];
+        for (const url of candidates) {
+          try {
+            const res = await fetch(url, {
+              headers: HDRS,
+              signal: controller.signal,
+            });
+            if (!res.ok) continue;
+            const raw = await res.json();
+            const arr = Array.isArray(raw)
+              ? raw
+              : raw?.items ?? raw?.data ?? [];
+            list = arr.map(normalizeShop).filter(Boolean);
+            break;
+          } catch {
+            // ลองตัวถัดไป
+          }
+        }
+
+        // กรองด้วย shopId ถ้ามี
+        const filtered = shopId
+          ? list.filter((s) => String(s.shopId) === String(shopId))
+          : list;
+
+        setShops(filtered);
       } catch (e) {
-        if (e.name !== "AbortError") setError(e.message || "Fetch failed");
+        if (e.name !== "AbortError") setErr(e);
       } finally {
         setLoading(false);
       }
     })();
     return () => controller.abort();
-  }, []);
+  }, [shopId]);
+
+  if (loading) {
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Skeleton variant="rounded" height={120} />
+      </Box>
+    );
+  }
+
+  if (err) {
+    return (
+      <Box sx={{ mt: 2, color: "crimson" }}>
+        โหลดข้อมูลร้านไม่สำเร็จ: {String(err.message || err)}
+      </Box>
+    );
+  }
+
+  if (shops.length === 0) {
+    return <Box sx={{ mt: 2 }}>ไม่พบร้าน</Box>;
+  }
 
   return (
     <AppTheme>
-      {/* กล่องกลางจอ */}
-      <Box
-        sx={{ maxWidth: 920, mx: "auto", pt: 3, pb: 6, px: { xs: 2, sm: 3 } }}
-      >
-        {loading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress size={28} />
-          </Box>
-        )}
-
-        {error && (
-          <Typography color="error" sx={{ my: 1, textAlign: "center" }}>
-            โหลดรายชื่อร้านไม่สำเร็จ: {error}
-          </Typography>
-        )}
-
-        {!loading && !error && shops.length === 0 && (
-          <Typography color="text.secondary" sx={{ textAlign: "center" }}>
-            ไม่มีข้อมูลร้านค้า
-          </Typography>
-        )}
-
-        {shops.map((s) => {
-          const logo = s.cover || "/IMG1/bagG.png";
-          return (
-            <Card
-              key={s.shopId ?? Math.random()}
-              variant="outlined"
+      <Box sx={{ mt: 3, mx: 10 }}>
+        {shops.map((s) => (
+          <Card
+            key={s.shopId}
+            sx={{
+              px: 2,
+              py: 1.5,
+              mb: 2,
+              borderRadius: 2,
+              display: "grid",
+              gridTemplateColumns: { xs: "60px 1fr", md: "80px 1fr auto auto" },
+              alignItems: "center",
+              columnGap: 2,
+            }}
+            variant="outlined"
+          >
+            {/* รูปร้าน */}
+            <CardMedia
+              component="img"
+              image={s.image}
+              alt={s.name}
               sx={{
-                mb: 2,
-                borderRadius: 3,
-                px: { xs: 2, sm: 2 },
-                py: 2,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                width: { xs: 60, md: 72 },
+                height: { xs: 60, md: 72 },
+                objectFit: "cover",
+                borderRadius: 1.5,
+                border: (t) => `1px solid ${t.palette.divider}`,
               }}
-            >
-              <CardContent sx={{ py: 0 }}>
-                <Grid
-                  container
-                  alignItems="center"
-                  spacing={2}
-                  // ทำให้เนื้อหาอยู่ตรงกลางสวย ๆ
-                  justifyContent="space-between"
-                >
-                  {/* ซ้าย: โลโก้ + ชื่อ + ปุ่ม */}
-                  <Grid item xs={12} md={6}>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Avatar
-                        src={logo}
-                        alt={s.name}
-                        variant="rounded"
-                        sx={{ width: 80, height: 60, borderRadius: 0 }}
-                        imgProps={{
-                          onError: (e) => {
-                            e.currentTarget.src = "/IMG1/bagG.png";
-                          },
-                          loading: "lazy",
-                        }}
-                      />
-                      <Stack spacing={1} sx={{ minWidth: 0 }}>
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={800}
-                          noWrap
-                          title={s.name}
-                        >
-                          {s.name}
-                        </Typography>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => goToShop(s)}
-                          sx={{
-                            borderRadius: 1,
-                            px: 1.25,
-                            py: 0.25,
-                            alignSelf: "flex-start",
-                          }}
-                        >
-                          VIEW SHOP
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  </Grid>
+              onError={(e) => (e.currentTarget.src = "/IMG1/bagG.png")}
+            />
 
-                  {/* เส้นแบ่งเฉพาะจอ md+ */}
-                  <Grid
-                    item
-                    md="auto"
-                    sx={{ display: { xs: "none", md: "block" } }}
-                  >
-                    <Divider orientation="vertical" flexItem />
-                  </Grid>
+            {/* ชื่อร้าน/เจ้าของ */}
+            <CardContent sx={{ p: 0, minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
+                {s.name} {s.owner ? `(${s.owner})` : ""}
+              </Typography>
+            </CardContent>
 
-                  {/* ขวา: ข้อมูลตัวเลข */}
-                  <Grid item xs={12} md={5}>
-                    <Grid
-                      container
-                      columnSpacing={3}
-                      rowSpacing={1}
-                      justifyContent={{ xs: "flex-start", md: "center" }}
-                    >
-                      <Metric label="Phone" value={s.phone ?? "-"} />
-                      <Metric label="Shop ID" value={s.shopId ?? "-"} />
-                    </Grid>
-                  </Grid>
-                </Grid>
+            <Box sx={{ display: "flex", mt: 2, gap: 10 }}>
+              {/* เบอร์โทร */}
+              <CardContent sx={{ p: 0, display: { xs: "none", md: "block" } }}>
+                <Typography variant="body2" color="text.secondary">
+                  Phone
+                </Typography>
+                <Typography sx={{ fontWeight: 700, color: "error.main" }}>
+                  {s.phone || "-"}
+                </Typography>
               </CardContent>
-            </Card>
-          );
-        })}
+
+              {/* Shop ID + ปุ่ม */}
+              <CardContent
+                sx={{
+                  p: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  justifyContent: { xs: "flex-start", md: "flex-end" },
+                }}
+              >
+                <Box sx={{ display: { xs: "none", md: "block" }, mr: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Shop ID
+                  </Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{s.shopId}</Typography>
+                </Box>
+
+                <Button
+                  variant="outlined"
+                  component={Link}
+                  to={`/shop/${s.shopId}`}
+                  sx={{ alignItems: "center" }}
+                >
+                  VIEW SHOP
+                </Button>
+              </CardContent>
+            </Box>
+          </Card>
+        ))}
       </Box>
     </AppTheme>
-  );
-}
-
-function Metric({ label, value }) {
-  return (
-    <Grid item xs="auto">
-      <Stack alignItems={{ xs: "flex-start", md: "center" }} spacing={0.5}>
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-        <Typography variant="subtitle1" fontWeight={700} color="error.main">
-          {value}
-        </Typography>
-      </Stack>
-    </Grid>
   );
 }

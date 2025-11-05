@@ -18,6 +18,10 @@ import StoreShowUI from "./shopui/StoreShowUI.jsx";
 import SearchItem from "./Search/SearchItem.jsx";
 import CategoryById from "./categorylayout/CategoryById.jsx";
 import Help from "./component/Help.jsx";
+import NewProductHome from "./homelayout/NewProductHome.jsx";
+import OpenShop from "./manageshop/OpenShop.jsx";
+import AddShopItem from "./manageshop/AddShopItem.jsx";
+import Myorder from "./manageshop/AddShopItem.jsx";
 
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/authStore.jsx";
@@ -34,15 +38,16 @@ const router = createBrowserRouter([
       },
       {
         path: "openstore",
-        element: <OpenStore />,
+        element: <OpenShop />,
       },
       {
         path: "categoryitems/:id",
         element: <CategoryShopId />,
       },
+
       {
-        path: "allshop",
-        element: <Shop />,
+        path: "allsh",
+        element: <AllShopUI />, // แสดงทุกร้าน
       },
       {
         path: "mainshop/:sellId",
@@ -64,6 +69,22 @@ const router = createBrowserRouter([
         path: "help",
         element: <Help />,
       },
+      {
+        path: "allproducts",
+        element: <NewProductHome />,
+      },
+      {
+        path: "myshop",
+        element: <OpenShop />,
+      },
+      {
+        path: "manage",
+        element: <AddShopItem />,
+      },
+      {
+        path: "shop-orders",
+        element: <Myorder />,
+      },
     ],
   },
   {
@@ -77,6 +98,10 @@ const router = createBrowserRouter([
   {
     path: "cart",
     element: <Cart />,
+  },
+  {
+    path: "/shopicon/:id",
+    element: <ShopIcon />,
   },
 ]);
 

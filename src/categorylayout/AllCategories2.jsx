@@ -230,50 +230,52 @@ function CategoryCard({ items }) {
         {objectall
           .filter((ob) => String(ob.id) === String(items.Category_ID))
           .map((ob) => (
-            <CardActionArea
-              component={Link}
-              to={`/categoryitems/${items.Category_ID}`} // ← ส่ง id ใน URL
-              state={{ name: items.Category_ID }} // ← ส่งชื่อไปด้วย (optional
-              sx={{ height: "100%" }}
-            >
-              <Box
-                sx={{
-                  width: 120,
-                  height: 120,
-                  mx: "auto",
-                  mt: 1.5,
-                  borderRadius: "50%",
-                  bgcolor: "grey.100",
-                  display: "grid",
-                  placeItems: "center",
-                }}
+            <Box key={ob.id}>
+              <CardActionArea
+                component={Link}
+                to={`/categoryitems/${items.Category_ID}`} // ← ส่ง id ใน URL
+                state={{ name: items.Category_ID }} // ← ส่งชื่อไปด้วย (optional
+                sx={{ height: "100%" }}
               >
-                <CardMedia
-                  key={ob.id}
-                  component="img"
-                  src={ob.img}
-                  alt={ob.name}
-                  sx={{ width: 100, height: 100, objectFit: "contain" }}
-                />
-              </Box>
-              <CardContent>
-                <Typography
-                  variant="body2"
-                  align="center"
+                <Box
                   sx={{
-                    mt: 1,
-                    lineHeight: 1.2,
-                    minHeight: 36,
-                    maxHeight: 36,
-                    fontSize: 16,
-                    overflow: "hidden",
+                    width: 120,
+                    height: 120,
+                    mx: "auto",
+                    mt: 1.5,
+                    borderRadius: "50%",
+                    bgcolor: "grey.100",
+                    display: "grid",
+                    placeItems: "center",
                   }}
-                  title={items.Category_Name}
                 >
-                  {items.Category_Name}
-                </Typography>
-              </CardContent>
-            </CardActionArea>
+                  <CardMedia
+                    key={ob.id}
+                    component="img"
+                    src={ob.img}
+                    alt={ob.name}
+                    sx={{ width: 100, height: 100, objectFit: "contain" }}
+                  />
+                </Box>
+                <CardContent>
+                  <Typography
+                    variant="body2"
+                    align="center"
+                    sx={{
+                      mt: 1,
+                      lineHeight: 1.2,
+                      minHeight: 36,
+                      maxHeight: 36,
+                      fontSize: 16,
+                      overflow: "hidden",
+                    }}
+                    title={items.Category_Name}
+                  >
+                    {items.Category_Name}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Box>
           ))}
       </Card>
     </Box>

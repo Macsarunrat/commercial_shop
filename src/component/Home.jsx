@@ -7,7 +7,7 @@ const Home = () => {
   return (
     <div className="">
       <BarHome />
-      <NewProductHome />
+      <NewProductHome limit={6} showSeeAllText={true} />
       <CategoryHome />
     </div>
   );
