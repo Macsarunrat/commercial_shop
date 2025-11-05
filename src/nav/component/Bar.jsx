@@ -1,4 +1,3 @@
-// src/nav/Bar.jsx
 import * as React from "react";
 import {
   AppBar,
@@ -161,7 +160,14 @@ export default function Bar() {
     localStorage.setItem("hasShop", "0");
     localStorage.setItem("navMode", "buyer");
     window.dispatchEvent(new Event("storage"));
-    navigate("/", { replace: true });
+    
+    navigate("/", { 
+      replace: true, 
+      state: { message: "ออกจากระบบสำเร็จ!" } 
+    });
+
+    window.location.href = "/";
+    
   };
 
   // เมนู 2 โหมด
