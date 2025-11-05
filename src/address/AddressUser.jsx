@@ -245,7 +245,16 @@ export default function AddressUser({ onSelect, compact = true }) {
     };
   }, [token, authHeaders]);
 
-  async function load() {
+  // ✅ FIX 1: ห่อฟังก์ชัน load ด้วย useCallback
+  const load = React.useCallback(async () => {
+    // ตรวจสอบว่ามี Token ใน Header จริงๆ
+    if (!authHeaders.Authorization) {
+      setErr("ยังไม่ได้เข้าสู่ระบบ (Missing Token)");
+      setLoading(false);
+      setList([]);
+      return;
+    }
+
     setLoading(true);
     setErr(null);
     try {
@@ -253,7 +262,10 @@ export default function AddressUser({ onSelect, compact = true }) {
         headers: authHeaders,
         credentials: "include",
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // ตรวจสอบ 401 โดยเฉพาะ
+      if (res.status === 401) throw new Error("HTTP 401: Unauthorized (Token อาจหมดอายุ)");
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      
       const data = await res.json();
       const rows = Array.isArray(data) ? data : data?.items ?? [];
       setList(rows);
@@ -263,12 +275,20 @@ export default function AddressUser({ onSelect, compact = true }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [authHeaders, selectedId, onSelect]); // <-- เพิ่ม dependencies
 
+  // ✅ FIX 2: แก้ไข useEffect ให้รอ Token ก่อน
   React.useEffect(() => {
-    load(); // first load
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // ทำงานเฉพาะเมื่อ "token" พร้อมใช้งาน
+    if (token) {
+      load();
+    } else {
+      // ถ้าไม่มี token (เช่น logout) ก็ไม่ต้องโหลด
+      setLoading(false);
+      setErr("กรุณาเข้าสู่ระบบเพื่อจัดการที่อยู่");
+      setList([]);
+    }
+  }, [token, load]); // <-- เปลี่ยน dependency เป็น token และ load
 
   /* ---------- CREATE / UPDATE / DELETE ---------- */
   async function createAddress(form) {
@@ -278,7 +298,7 @@ export default function AddressUser({ onSelect, compact = true }) {
     try {
       // ฝั่งเซิร์ฟเวอร์ต้องการ User_ID
       const uid = Number(userId);
-      if (!uid) throw new Error("ไม่พบ User_ID ของผู้ใช้ (โปรดลองล็อกอินใหม่)");
+      if (!uid) throw new Error("กรุณาเข้าสู่ระบบเพื่อจัดการที่อยู่");
       payload.User_ID = uid;
 
       const res = await fetch(`${API}/user-address/`, {
@@ -378,12 +398,6 @@ export default function AddressUser({ onSelect, compact = true }) {
         {err && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {err}
-          </Alert>
-        )}
-
-        {!userId && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            กำลังตรวจสอบข้อมูลผู้ใช้… (จำเป็นต้องทราบ User_ID เพื่อเพิ่มที่อยู่)
           </Alert>
         )}
 
