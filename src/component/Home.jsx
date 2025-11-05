@@ -18,15 +18,28 @@ const Home = () => {
   });
 
   React.useEffect(() => {
-    if (location.state?.message) {
+    const loginMessage = location.state?.message;
+    
+    const logoutMessage = sessionStorage.getItem("snackbar_message");
+
+    if (loginMessage) {
       setSnackbar({
         open: true,
-        message: location.state.message,
+        message: loginMessage,
         severity: "success",
       });
+      // เคลียร์ message ออกจาก state
       navigate(location.pathname, { replace: true, state: {} });
+    } else if (logoutMessage) {
+      setSnackbar({
+        open: true,
+        message: logoutMessage,
+        severity: "success",
+      });
+      // เคลียร์ message ออกจาก sessionStorage (กัน F5 แล้วขึ้นซ้ำ)
+      sessionStorage.removeItem("snackbar_message");
     }
-  }, [location.state, navigate, location.pathname]);
+  }, [location.state, navigate, location.pathname]); 
 
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
@@ -41,6 +54,7 @@ const Home = () => {
       <NewProductHome limit={6} showSeeAllText={true} />
       <CategoryHome />
 
+      {/* ... (Snackbar JSX เหมือนเดิม) */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
