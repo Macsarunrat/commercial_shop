@@ -1,46 +1,18 @@
-// CategoryHome.jsx
+// src/categorylayout/CategoryHome.jsx
 import * as React from "react";
-import {
-  Box,
-  Typography,
-  Card,
-  CardActionArea,
-  CardMedia,
-  CardContent,
-  IconButton,
-} from "@mui/material";
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import { Box, Typography, Button } from "@mui/material";
 import AppTheme from "../theme/AppTheme";
 import AllCategories2 from "../categorylayout/AllCategories2";
 
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const HDRS = { "ngrok-skip-browser-warning": "true" };
+
 export default function CategoryHome() {
-  const ref = React.useRef(null);
-  const [canLeft, setCanLeft] = React.useState(false);
-  const [canRight, setCanRight] = React.useState(true);
-
-  const updateArrows = () => {
-    const el = ref.current;
-    if (!el) return;
-    setCanLeft(el.scrollLeft > 0);
-    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  };
-
-  React.useEffect(() => {
-    updateArrows();
-    const el = ref.current;
-    if (!el) return;
-    const onScroll = () => updateArrows();
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const scrollBy = (dir = 1) => {
-    const el = ref.current;
-    if (!el) return;
-    const amount = Math.round(el.clientWidth * 0.8) * dir; // เลื่อนที 80% ของความกว้าง
-    el.scrollBy({ left: amount, behavior: "smooth" });
-  };
+  // --- Dialog state ---
+  const [open, setOpen] = React.useState(false);
+  const [name, setName] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   return (
     <AppTheme>
@@ -54,8 +26,15 @@ export default function CategoryHome() {
           position: "relative",
         }}
       >
-        {/* Header */}
-        <Box sx={{ display: "flex", mb: 2 }}>
+        {/* Header + ปุ่มเพิ่มหมวดหมู่ */}
+        <Box
+          sx={{
+            display: "flex",
+            mb: 2,
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Typography
             variant="h5"
             sx={{ color: "#d62828", fontFamily: "Prompt", fontWeight: 500 }}
@@ -64,9 +43,8 @@ export default function CategoryHome() {
           </Typography>
         </Box>
 
-        {/* แท่นเลื่อนแนวนอน: grid 2 แถว, ไหลเป็นคอลัมน์ */}
+        {/* โซนแสดงหมวดหมู่ (เลย์เอาต์เดิม) */}
         <Box sx={{ mx: -2, mb: -2 }}>
-          {/* แสดง 2 แถว, เลื่อนซ้าย/ขวาได้*/}
           <AllCategories2 />
         </Box>
       </Box>

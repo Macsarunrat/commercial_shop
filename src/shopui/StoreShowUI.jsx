@@ -15,7 +15,7 @@ import Skeleton from "@mui/material/Skeleton";
 import AppTheme from "../theme/AppTheme";
 import { useLocation, useParams } from "react-router-dom";
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /** ตัวช่วยประกอบ query string (ตัดค่า null/undefined/"") ออก */

@@ -1,5 +1,5 @@
 // src/cart/cartCon.jsx
-const API_BASE = "https://great-lobster-rightly.ngrok-free.app";
+const API_BASE = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const CART = `${API_BASE}/cart`;
 
 const NGROK_HDR = { "ngrok-skip-browser-warning": "true" };

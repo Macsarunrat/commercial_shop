@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useSearchParams, Link } from "react-router-dom";
 
-const API_BASE = "https://great-lobster-rightly.ngrok-free.app";
+const API_BASE = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /** ประกอบ query string (ตัดค่า null/undefined/"" ออก) */

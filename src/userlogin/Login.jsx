@@ -12,7 +12,7 @@ import AppTheme from "../theme/AppTheme";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 
-const BASE_URL = "https://great-lobster-rightly.ngrok-free.app";
+const BASE_URL = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 
 export default function Login() {
   const navigate = useNavigate();

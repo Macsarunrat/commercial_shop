@@ -38,7 +38,6 @@
 
 import React from "react";
 import RegisStore from "../openstorelayout/RegisStore";
-import Box from "@mui/material/Box";
 
 const OpenStore = () => {
   return (

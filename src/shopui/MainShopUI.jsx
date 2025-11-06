@@ -29,7 +29,7 @@ import useCartStore from "../stores/cartStore"; // ใช้เฉพาะ fetc
 import { addToCartServer } from "../cart/cartCon"; // ยิงหลังบ้านจริง
 import { useAuthStore } from "../stores/authStore"; // เช็ค token
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ----------------------- helpers ----------------------- */

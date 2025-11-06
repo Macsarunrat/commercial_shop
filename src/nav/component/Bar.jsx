@@ -16,7 +16,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import AppTheme from "../../theme/AppTheme";
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ---------------- helpers ---------------- */

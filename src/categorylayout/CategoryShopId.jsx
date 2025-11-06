@@ -13,7 +13,7 @@ import ButtonSort from "../ObjectDetailCategory/ButtonSort";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useMemo } from "react";
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 export default function CategoryShopId() {

@@ -1,3 +1,4 @@
+// src/categorylayout/AllCategories.jsx
 import * as React from "react";
 import {
   Box,
@@ -12,11 +13,8 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import AppTheme from "../theme/AppTheme";
 import { Link } from "react-router-dom";
-import { useRef, useState, useEffect } from "react";
-import { useMemo } from "react";
-import { useCallback } from "react";
-import axios from "axios";
-// Img import //
+
+// ---------------- Images ----------------
 import bag from "../img/Gemini/bagG.png";
 import bodylotion from "../img/Gemini/skincareG.png";
 import book from "../img/Gemini/bookG.png";
@@ -35,8 +33,8 @@ import shoe from "../img/Gemini/shoeG.png";
 import sport from "../img/Gemini/sportG.png";
 import toy from "../img/Gemini/toyG.png";
 import tv from "../img/Gemini/tvG.png";
-import { Filter } from "@mui/icons-material";
-// img import //
+
+// -------------- Icon mapping (local) --------------
 const objectall = [
   { id: 16, name: "cloths", img: cloth },
   { id: 2, name: "pants", img: pant },
@@ -57,48 +55,61 @@ const objectall = [
   { id: 9, name: "bookBooks&stationery", img: book },
   { id: 10, name: "foods&drinks", img: food },
 ];
+const iconMap = new Map(objectall.map((o) => [String(o.id), o]));
 
-// const api = axios.create({
-//   baseURL: "https://great-lobster-rightly.ngrok-free.app",
-//   timeout: 15000,
-//   headers: {
-//     Accept: "application/json",
-//     "X-Requested-With": "XMLHttpRequest",
-//   },
-//   // withCredentials: true, // ถ้าต้องส่งคุกกี้
-// });
+// -------------- API config --------------
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const HDRS = { "ngrok-skip-browser-warning": "true" };
 
+// -------------- Page --------------
 export default function AllCategories() {
-  const ref = useRef(null);
-  const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(true);
-  const [items, setItems] = useState([]);
+  const ref = React.useRef(null);
+  const [canLeft, setCanLeft] = React.useState(false);
+  const [canRight, setCanRight] = React.useState(true);
+  const [items, setItems] = React.useState([]);
 
-  useEffect(() => {
-    hdlFetch();
-  }, []);
-
-  const hdlFetch = async () => {
+  // fetch categories (ทั้งหมดจาก /category)
+  const hdlFetch = React.useCallback(async (signal) => {
     try {
-      const res = await fetch(
-        "https://great-lobster-rightly.ngrok-free.app/category/",
-        {
-          method: "GET",
-          headers: {
-            "ngrok-skip-browser-warning": "true",
-            credentials: "include",
-          },
-        }
-      );
+      const res = await fetch(`${API}/category`, {
+        method: "GET",
+        headers: HDRS,
+        credentials: "include", // สำคัญ: อยู่นอก headers
+        signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      console.log(data);
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.log(error);
       setItems([]);
     }
-  };
+  }, []);
 
+  // โหลดครั้งแรก + ผูก event รีเฟรช + รีเฟรชตอนโฟกัสกลับมา
+  React.useEffect(() => {
+    const ac = new AbortController();
+    hdlFetch(ac.signal);
+
+    const onRefresh = () => hdlFetch(); // broadcast จากหน้าสร้างหมวด
+    const onFocus = () => hdlFetch();
+
+    window.addEventListener("categories:refresh", onRefresh);
+    window.addEventListener("focus", onFocus);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") hdlFetch();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      ac.abort();
+      window.removeEventListener("categories:refresh", onRefresh);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [hdlFetch]);
+
+  // ลูกศรซ้าย/ขวา
   const updateArrows = React.useCallback(() => {
     const el = ref.current;
     if (!el) return;
@@ -109,7 +120,6 @@ export default function AllCategories() {
     );
   }, []);
 
-  // เรียกครั้งแรก + ผูก scroll
   React.useEffect(() => {
     updateArrows();
     const el = ref.current;
@@ -119,14 +129,11 @@ export default function AllCategories() {
     return () => el.removeEventListener("scroll", onScroll);
   }, [updateArrows]);
 
-  // วัดใหม่ทุกครั้งที่ items เปลี่ยน (หลังดึงข้อมูลสำเร็จ)
   React.useEffect(() => {
-    // รอให้ layout เสร็จ (โดยเฉพาะรูป)
     const id = requestAnimationFrame(updateArrows);
     return () => cancelAnimationFrame(id);
   }, [items, updateArrows]);
 
-  // วัดใหม่เมื่อหน้าจอเปลี่ยนขนาด
   React.useEffect(() => {
     const ro = new ResizeObserver(() => updateArrows());
     if (ref.current) ro.observe(ref.current);
@@ -143,8 +150,6 @@ export default function AllCategories() {
     if (!el) return;
     const amount = Math.round(el.clientWidth * 0.8) * dir;
     el.scrollBy({ left: amount, behavior: "smooth" });
-    // อัปเดตสถานะปุ่มหลังเลื่อน
-    // ใช้ rAF 2 เฟรมเพื่อให้ scroll ตอบสนองก่อน
     requestAnimationFrame(() => requestAnimationFrame(updateArrows));
   };
 
@@ -190,21 +195,20 @@ export default function AllCategories() {
         <Box
           ref={ref}
           sx={{
-            overflowX: "none", // ซ่อนและ "ปิด" การสกรอลด้วยผู้ใช้
+            overflowX: "hidden", // ถูกต้อง (แทน "none")
             overflowY: "hidden",
-            overscrollBehaviorX: "none", // กัน scroll-chain ไปพาเรนต์
+            overscrollBehaviorX: "none",
             display: "grid",
             gridAutoFlow: "column",
             gridTemplateRows: "repeat(2, 1fr)",
             gridAutoColumns: { xs: "130px", sm: "150px", md: "194.5px" },
             justifyContent: "start",
-
-            scrollbarWidth: "none", // ซ่อนสกรอลบาร์ (Firefox)
-            "&::-webkit-scrollbar": { display: "none" }, // ซ่อน (WebKit)
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": { display: "none" },
           }}
         >
-          {items.map((items) => (
-            <CategoryCard key={items.Category_ID} items={items} />
+          {items.map((it) => (
+            <CategoryCard key={it.Category_ID} items={it} />
           ))}
         </Box>
       </Box>
@@ -212,8 +216,13 @@ export default function AllCategories() {
   );
 }
 
-// ===== แยกการ์ด 1 ใบต่อ 1 category =====
+// ===== การ์ด 1 ใบต่อ 1 category =====
 function CategoryCard({ items }) {
+  // หาไอคอน ถ้าไม่เจอ ใช้ fallback (bag)
+  const icon = iconMap.get(String(items.Category_ID));
+  const imgSrc = icon?.img ?? bag;
+  const alt = icon?.name ?? items.Category_Name;
+
   return (
     <Box>
       <Card
@@ -227,57 +236,123 @@ function CategoryCard({ items }) {
           flexDirection: "column",
         }}
       >
-        {objectall
-          .filter((ob) => String(ob.id) === String(items.Category_ID))
-          .map((ob) => (
-            <Box key={ob.id}>
-              <CardActionArea
-                component={Link}
-                to={`/categoryitems/${items.Category_ID}`} // ← ส่ง id ใน URL
-                state={{ name: items.Category_ID }} // ← ส่งชื่อไปด้วย (optional
-                sx={{ height: "100%" }}
-              >
-                <Box
-                  sx={{
-                    width: 120,
-                    height: 120,
-                    mx: "auto",
-                    mt: 1.5,
-                    borderRadius: "50%",
-                    bgcolor: "grey.100",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  <CardMedia
-                    key={ob.id}
-                    component="img"
-                    src={ob.img}
-                    alt={ob.name}
-                    sx={{ width: 100, height: 100, objectFit: "contain" }}
-                  />
-                </Box>
-                <CardContent>
-                  <Typography
-                    variant="body2"
-                    align="center"
-                    sx={{
-                      mt: 1,
-                      lineHeight: 1.2,
-                      minHeight: 36,
-                      maxHeight: 36,
-                      fontSize: 16,
-                      overflow: "hidden",
-                    }}
-                    title={items.Category_Name}
-                  >
-                    {items.Category_Name}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Box>
-          ))}
+        <CardActionArea
+          component={Link}
+          to={`/categoryitems/${items.Category_ID}`}
+          state={{ name: items.Category_Name }} // ส่งชื่อจริงไปด้วย
+          sx={{ height: "100%" }}
+        >
+          <Box
+            sx={{
+              width: 120,
+              height: 120,
+              mx: "auto",
+              borderRadius: "50%",
+              bgcolor: "grey.100",
+              display: "grid",
+              placeItems: "center",
+              mt: 2,
+            }}
+          >
+            <CardMedia
+              component="img"
+              src={imgSrc}
+              alt={alt}
+              sx={{ width: 120, height: 120, objectFit: "contain" }}
+            />
+          </Box>
+          <CardContent>
+            <Typography
+              variant="body2"
+              align="center"
+              sx={{
+                mt: 1,
+                lineHeight: 1.2,
+                minHeight: 36,
+                maxHeight: 36,
+                fontSize: 16,
+                overflow: "hidden",
+              }}
+              title={items.Category_Name}
+            >
+              {items.Category_Name}
+            </Typography>
+          </CardContent>
+        </CardActionArea>
       </Card>
     </Box>
   );
 }
+
+// ===== แยกการ์ด 1 ใบต่อ 1 category =====
+// function CategoryCard({ items }) {
+//   return (
+//     <Box>
+//       <Card
+//         variant="outlined"
+//         sx={{
+//           width: "100%",
+//           height: "100%",
+//           borderRadius: 0,
+//           boxShadow: "none",
+//           display: "flex",
+//           flexDirection: "column",
+//         }}
+//       >
+//         {objectall
+//           .filter((ob) => String(ob.id) === String(items.Category_ID))
+//           .map((ob) => (
+//             <Box key={ob.id}>
+//               <CardActionArea
+//                 component={Link}
+//                 to={`/categoryitems/${items.Category_ID}`} // ← ส่ง id ใน URL
+//                 state={{ name: items.Category_ID }} // ← ส่งชื่อไปด้วย (optional
+//                 sx={{ height: "100%" }}
+//               >
+//                 <Box
+//                   sx={{
+//                     width: 120,
+//                     height: 120,
+//                     mx: "auto",
+//                     borderRadius: "50%",
+//                     bgcolor: "grey.100",
+//                     display: "grid",
+//                     placeItems: "center",
+//                   }}
+//                 >
+//                   <CardMedia
+//                     key={ob.id}
+//                     component="img"
+//                     src={ob.img}
+//                     alt={ob.name}
+//                     sx={{
+//                       width: 100,
+//                       height: 100,
+//                       objectFit: "contain",
+//                     }}
+//                   />
+//                 </Box>
+//                 <CardContent>
+//                   <Typography
+//                     variant="body2"
+//                     align="center"
+//                     sx={{
+//                       mt: 1,
+//                       lineHeight: 1.2,
+//                       minHeight: 36,
+//                       maxHeight: 36,
+//                       fontSize: 16,
+//                       overflow: "hidden",
+//                     }}
+//                     title={items.Category_Name}
+//                   >
+//                     {items.Category_Name}
+//                   </Typography>
+//                 </CardContent>
+//               </CardActionArea>
+//             </Box>
+//           ))}
+//       </Card>
+//     </Box>
+//   );
+// }

@@ -1,6 +1,6 @@
 import { useAuthStore } from "../stores/authStore";
 
-const BASE_URL = "https://great-lobster-rightly.ngrok-free.app";
+const BASE_URL = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const NGROK_HDR = { "ngrok-skip-browser-warning": "true" };
 
 /**

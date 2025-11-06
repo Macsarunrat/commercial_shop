@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 
 // src/shopui/ShopIcon.jsx
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ---------- helpers ---------- */

@@ -182,7 +182,7 @@ const router = createBrowserRouter([
 
       // ---------- protected routes ----------
       {
-        element: <ProtectedRoute />, // ⬅️ ครอบกลุ่มที่ต้องล็อกอิน
+        element: <ProtectedRoute />, //ครอบกลุ่มที่ต้องล็อกอิน
         children: [
           { path: "myshop", element: <OpenShop /> },
           { path: "manage", element: <AddShopItem /> },

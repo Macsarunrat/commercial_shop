@@ -161,7 +161,7 @@ import { Link } from "react-router-dom";
 //   );
 // }
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 // แปลงข้อมูลร้านจาก API → โครงกลางที่ UI ใช้

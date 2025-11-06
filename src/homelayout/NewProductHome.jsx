@@ -1,21 +1,20 @@
+// src/home/NewProductHome.jsx
 import * as React from "react";
-import { styled } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Grid from "@mui/material/Grid";
 import {
+  Box,
   Stack,
   Card,
   CardContent,
   CardMedia,
   Typography,
   CardActionArea,
+  IconButton,
 } from "@mui/material";
-import IconButton from "@mui/material/IconButton";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import { Navigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-const API_URL = "https://great-lobster-rightly.ngrok-free.app/products";
+const API_URL =
+  "https://unsparingly-proextension-jacque.ngrok-free.dev/products";
 const HDRS = {
   Accept: "application/json",
   "ngrok-skip-browser-warning": "true",
@@ -39,6 +38,7 @@ export default function NewProductHome({ limit, showSeeAllText = false }) {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
+        // /products ควรคืน array ของสินค้าหลัก (master products)
         setItems(Array.isArray(json) ? json : json?.data || []);
       } catch (e) {
         if (e.name !== "AbortError") setError(e.message || "Fetch error");
@@ -96,7 +96,7 @@ export default function NewProductHome({ limit, showSeeAllText = false }) {
         </IconButton>
       </Box>
 
-      {/* Grid: คอลัมน์กว้างอย่างน้อย 200px แล้วขยายเป็น 1fr */}
+      {/* Grid */}
       <Stack sx={{ flexGrow: 1 }}>
         <Box
           sx={{
@@ -127,13 +127,27 @@ export default function NewProductHome({ limit, showSeeAllText = false }) {
           {!loading &&
             !error &&
             list.map((o, idx) => {
+              const pid = o?.Product_ID ?? o?.product_id ?? o?.id ?? null; // master product id
               const title =
-                o?.Product_Name || o?.Category_Name || o?.name || "ไม่ระบุชื่อ";
-              const img = o?.image || o?.ImageUrl || "/placeholder.png";
-              const key = o?.id ?? idx;
+                o?.Product_Name || o?.name || o?.Category_Name || "ไม่ระบุชื่อ";
+              const img =
+                o?.Cover_Image || o?.image || o?.ImageUrl || "/IMG1/bagG.png";
+              const key = pid ?? idx;
+
+              // ✅ ลิงก์ไปหน้า detail ที่กดซื้อได้
+              // ใช้ route /mainshop/:sellId แต่ถ้าไม่มี Sell_ID ให้ใส่ pid ไปใน path ด้วย
+              // และแนบ ?pid=... + state เพื่อให้ MainShopUI หาและโหลดตาม pid
+              const detailHref = `/mainshop/${encodeURIComponent(
+                String(pid ?? "")
+              )}?pid=${encodeURIComponent(String(pid ?? ""))}`;
 
               return (
-                <CardActionArea key={key}>
+                <CardActionArea
+                  key={key}
+                  component={Link}
+                  to={detailHref}
+                  state={{ productId: pid }}
+                >
                   <Card
                     sx={{
                       height: "100%",
@@ -141,7 +155,7 @@ export default function NewProductHome({ limit, showSeeAllText = false }) {
                       flexDirection: "column",
                     }}
                   >
-                    {/* รูปสี่เหลี่ยมจัตุรัส → การ์ดสูงเท่ากันทุกใบ */}
+                    {/* รูปจัตุรัส */}
                     <Box
                       sx={{
                         position: "relative",
@@ -154,6 +168,9 @@ export default function NewProductHome({ limit, showSeeAllText = false }) {
                         component="img"
                         image={img}
                         alt={title}
+                        onError={(e) =>
+                          (e.currentTarget.src = "/IMG1/bagG.png")
+                        }
                         sx={{
                           position: "absolute",
                           inset: 0,

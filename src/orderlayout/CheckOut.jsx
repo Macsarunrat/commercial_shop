@@ -25,7 +25,7 @@ import AppTheme from "../theme/AppTheme";
 import { useAuthStore } from "../stores/authStore";
 import useCartStore from "../stores/cartStore";
 
-const API = "https://great-lobster-rightly.ngrok-free.app";
+const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ---------- helpers ---------- */

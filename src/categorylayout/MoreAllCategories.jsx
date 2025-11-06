@@ -61,7 +61,6 @@ const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* -------------- Card -------------- */
 function CategoryCard({ c }) {
-  // รองรับทั้งข้อมูลจาก API ({Category_ID, Category_Name}) และ fallback อื่น ๆ
   const id = c?.Category_ID ?? c?.id;
   const label = c?.Category_Name ?? c?.name ?? "";
   const icon = iconMap.get(String(id));
@@ -131,31 +130,57 @@ export default function AllCategories() {
   const [items, setItems] = React.useState([]);
   const [error, setError] = React.useState("");
 
-  React.useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        setError("");
-        const res = await fetch(`${API}/category/`, {
-          method: "GET",
-          headers: HDRS,
-          credentials: "include", // สำคัญ: ให้ส่งคุกกี้ (ถ้ามี)
-          signal: ac.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setItems(Array.isArray(data) ? data : []);
-      } catch (e) {
+  const fetchCategories = React.useCallback(async (signal) => {
+    setError("");
+    try {
+      const res = await fetch(`${API}/category/`, {
+        method: "GET",
+        headers: HDRS,
+        credentials: "include",
+        signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      if (e.name !== "AbortError") {
         console.error(e);
         setError("โหลดหมวดหมู่ไม่สำเร็จ");
         setItems([]);
       }
-    })();
-    return () => ac.abort();
+    }
   }, []);
 
+  React.useEffect(() => {
+    const ac = new AbortController();
+    fetchCategories(ac.signal);
+
+    // โพลลิ่งทุก 15 วินาที
+    const iv = setInterval(() => fetchCategories(), 15000);
+
+    // โฟกัส/กลับมาแอคทีฟ → รีเฟรช
+    const onFocus = () => fetchCategories();
+    const onVis = () =>
+      document.visibilityState === "visible" && fetchCategories();
+
+    // หน้าหรือคอมโพเนนต์อื่น broadcast มา
+    const onRefresh = () => fetchCategories();
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("categories:refresh", onRefresh);
+
+    return () => {
+      ac.abort();
+      clearInterval(iv);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("categories:refresh", onRefresh);
+    };
+  }, [fetchCategories]);
+
   return (
-    <>
+    <AppTheme>
       <Banner />
       <Box
         sx={{
@@ -166,11 +191,10 @@ export default function AllCategories() {
           mt: 5,
         }}
       >
-        {/* คุณยังคงเพิ่มหัวข้อ/ข้อความอื่น ๆ ได้ตามต้องการ */}
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(0, 1fr))", // แถวละ 5 การ์ด (เลย์เอาต์เดิม)
+            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
             gap: 0,
             mt: 2,
             overflow: "hidden",
@@ -183,7 +207,6 @@ export default function AllCategories() {
           ))}
         </Box>
 
-        {/* แสดงข้อความผิดพลาดแบบไม่เกะกะเลย์เอาต์ */}
         {!!error && (
           <Typography
             variant="body2"
@@ -194,6 +217,6 @@ export default function AllCategories() {
           </Typography>
         )}
       </Box>
-    </>
+    </AppTheme>
   );
 }
