@@ -31,7 +31,7 @@ def on_startup():
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # หรือใส่ ["http://localhost:3000"] เฉพาะ origin ของ React
+    allow_origins=["*"],  # หรือใส่ ["http://localhost:3000"] เฉพาะ origin ของ React
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

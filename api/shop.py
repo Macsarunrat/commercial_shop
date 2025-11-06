@@ -139,3 +139,70 @@ def get_my_shop_order_details(
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# ----------------------------------------------------------------------
+# ENDPOINT 1: ดึงข้อมูล Profile ร้านค้าของตัวเอง (Protected)
+# ----------------------------------------------------------------------
+
+@router.get(
+    "/me/profile", 
+    response_model=ShopRead,
+    summary="ดึงข้อมูล Profile ของร้านค้าที่กำลังล็อกอินอยู่"
+)
+def read_current_shop_profile(
+    session: SessionDep,
+    current_user: CurrentUser # 📌 User ที่ล็อกอินอยู่
+):
+    """
+    คืนข้อมูลพื้นฐานของร้านค้าที่ทำการร้องขอ (ชื่อ, เบอร์โทร, รูปปก)
+    """
+    
+    # 1. Authorization Check: ตรวจสอบว่า User มีร้านค้าหรือไม่
+    if not current_user.shops:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User does not own a shop."
+        )
+        
+    my_shop_id = current_user.shops.Shop_ID # 👈 ดึง Shop ID ที่ถูกต้อง
+
+    # 2. เรียก CRUD Function
+    shop = crud_shop.get_shop_details_by_id(db=session, shop_id=my_shop_id)
+    
+    # 3. ตรวจสอบอีกครั้ง (เผื่อข้อมูลเสียหาย)
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shop data corrupted or not found."
+        )
+        
+    # 4. คืนค่า Shop Object (FastAPI จะแปลงเป็น ShopRead ให้อัตโนมัติ)
+    return shop
+
+# ----------------------------------------------------------------------
+# ENDPOINT 2: ดึงข้อมูล Profile ร้านค้าสาธารณะ (Public View)
+# ----------------------------------------------------------------------
+
+@router.get(
+    "/{shop_id}", 
+    response_model=ShopRead, # 👈 ใช้ Schema เดียวกัน
+    summary="ดึงข้อมูล Profile ร้านค้าสำหรับผู้เข้าชม (Public View)"
+)
+def read_shop_profile_public(
+    shop_id: int,
+    session: SessionDep,
+):
+    """
+    ใช้สำหรับแสดงผลบนหน้าสินค้าหรือหน้าร้านค้าสาธารณะ 
+    (ไม่ต้องมีการยืนยันตัวตน)
+    """
+    shop = crud_shop.get_shop_details_by_id(db=session, shop_id=shop_id)
+    
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ไม่พบร้านค้า ID {shop_id}"
+        )
+        
+    return shop
