@@ -164,6 +164,7 @@ import ShopAddressCom from "./manageshop/AddressCom.jsx";
 import ProtectedRoute from "./nav/ProtectedRoute.jsx"; // ⬅️ เพิ่มอันนี้
 import { useAuthStore } from "./stores/authStore.jsx";
 import useCartStore from "./stores/cartStore";
+import Useimg from "./shopui/Useimg.jsx";
 
 const router = createBrowserRouter([
   {
@@ -205,6 +206,8 @@ const router = createBrowserRouter([
 
   { path: "/shopicon/:id", element: <ShopIcon /> },
   { path: "5columncategories", element: <MoreAllCategories /> },
+
+  { path: "Addimg", element: <Useimg /> },
 ]);
 
 const App = () => {
