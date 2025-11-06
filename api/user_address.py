@@ -6,7 +6,6 @@ import crud.user_address as crud_address
 from models.user_address import UserAddressRead, UserAddressCreateBody, UserAddressUpdateBody
 from pydantic import BaseModel
 
-# Import "ยาม"
 from security import get_current_user
 from models.user import User
 
@@ -26,9 +25,7 @@ def get_my_addresses(
     session: SessionDep,
     current_user: CurrentUser
 ):
-    """
-    API: ดึงที่อยู่ทั้งหมด (ของฉัน)
-    """
+
     return crud_address.get_addresses_by_user(session, current_user.User_ID)
 
 @router.post("/", response_model=UserAddressRead)
@@ -37,10 +34,7 @@ def create_my_address(
     session: SessionDep,
     current_user: CurrentUser
 ):
-    """
-    API: เพิ่มที่อยู่ใหม่ (ของฉัน)
-    (Body ไม่ต้องส่ง User_ID)
-    """
+
     return crud_address.create_user_address(session, current_user.User_ID, data)
 
 @router.put("/{address_id}", response_model=UserAddressRead)
@@ -50,10 +44,7 @@ def update_my_address(
     session: SessionDep,
     current_user: CurrentUser
 ):
-    """
-    API: แก้ไขที่อยู่ (ของฉัน)
-    (ระบบจะเช็คว่า address_id นี้เป็นของคุณหรือไม่)
-    """
+
     try:
         updated = crud_address.update_user_address(session, current_user.User_ID, address_id, data)
         return updated
@@ -66,10 +57,7 @@ def delete_my_address(
     session: SessionDep,
     current_user: CurrentUser
 ):
-    """
-    API: ลบที่อยู่ (ของฉัน)
-    (ระบบจะเช็คว่า address_id นี้เป็นของคุณหรือไม่)
-    """
+
     try:
         crud_address.delete_user_address(session, current_user.User_ID, address_id)
         return {"detail": "Address deleted successfully"}

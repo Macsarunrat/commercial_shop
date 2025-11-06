@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm  # <-- Import สำหรับ form data
+from fastapi.security import OAuth2PasswordRequestForm  
 from sqlmodel import Session
 from typing import Annotated
 from database import get_session
 import crud.user as crud_user
-from models.user import User, UserCreate, UserRead, Token  # <-- เพิ่ม Token
-from security import get_current_user  # <-- Import สำหรับ protected
+from models.user import User, UserCreate, UserRead, Token  
+from security import get_current_user 
 from datetime import timedelta
 from config import settings
 from pydantic import BaseModel
@@ -17,7 +17,6 @@ router = APIRouter(
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-# ตัวอย่าง Protected Endpoint (เช่น ดึงข้อมูล user ปัจจุบัน)
 @router.get("/me", response_model=UserRead)
 def read_users_me(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
@@ -29,7 +28,6 @@ def register_user(session: SessionDep, user_data: UserCreate):
     """
     try:
         user = crud_user.create_user(session, user_data)
-        # ตอบกลับเป็น UserRead (ที่ไม่มีรหัสผ่าน)
         return user 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -72,13 +70,5 @@ class LogoutResponse(BaseModel):
 def logout(
     current_user: Annotated[User, Depends(get_current_user)] 
 ):
-    """
-    API: ล็อกเอาต์ (Log out)
-    (ในระบบ JWT, Server แค่ยืนยันว่ารับทราบการ Logout)
-    (การ Logout จริงๆ เกิดขึ้นที่ Client โดยการลบ Token)
-    """
-    
-    # ⭐️ Server ไม่ต้องทำอะไรเลย เพราะ Token อยู่ที่ Client ⭐️
-    # เราแค่ต้องพึ่งพา 'get_current_user' เพื่อเช็คว่า Token ที่ส่งมายังไม่หมดอายุ
-    
+
     return {"detail": "Logged out successfully"}

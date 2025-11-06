@@ -21,7 +21,6 @@ def create_sell_item(db: Session, sell_data: SellCreate) -> Sell:
     if existing_sell:
         raise ValueError(f"This shop already sells this product. (Sell_ID: {existing_sell.Sell_ID})")
 
-    # 4. สร้าง Sell item
     new_sell_item = Sell.model_validate(sell_data)
     db.add(new_sell_item)
     db.commit()

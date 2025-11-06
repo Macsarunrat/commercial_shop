@@ -19,7 +19,6 @@ def create_new_sell_item(session: SessionDep, sell_data: SellCreate):
         sell_item = crud_sell.create_sell_item(session, sell_data)
         return sell_item
     except ValueError as e:
-        # ดัก Error (Shop/Product not found, or already exists)
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -2,8 +2,8 @@ from __future__ import annotations
 from sqlmodel import SQLModel, Field, Relationship, table
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
-from datetime import datetime # 👈 (เพิ่ม)
-from decimal import Decimal # 👈 (เพิ่ม)
+from datetime import datetime 
+from decimal import Decimal 
 
 from models.orderitems import OrderItemPublic
 from models.shop_image import ShopImageRead
@@ -31,24 +31,20 @@ class Shop(ShopBase, table=True):
     
     # Relationships
     user: Mapped["User"] = Relationship(sa_relationship=relationship(back_populates="shops"))
-    address: Mapped[Optional["Shop_Address"]] = Relationship(sa_relationship=relationship(back_populates="shop")) # 1-to-1
+    address: Mapped[Optional["Shop_Address"]] = Relationship(sa_relationship=relationship(back_populates="shop")) 
     items_for_sale: Mapped[List["Sell"]] = Relationship(sa_relationship=relationship(back_populates="shop"))
     shop_orders: Mapped[List["Shop_Orders"]] = Relationship(sa_relationship=relationship(back_populates="shop"))
 
-# Model สำหรับ Response (มี User_ID)
 class ShopRead(ShopBase):
     Shop_ID: int
     User_ID: int
     cover_image: Optional[ShopImageRead] = None
-    # ... (อาจจะมี address ฯลฯ)
 
-# Model ที่ CRUD ใช้ (มี User_ID)
 class ShopCreate(ShopBase):
     User_ID: int
 
-# Model ที่ API รับ Body (ไม่มี User_ID)
 class ShopCreateBody(ShopBase):
-    pass # (รับแค่ Shop_Name, Shop_Phone)
+    pass 
 
 
 class ShopReadWithAddress(ShopRead):
@@ -56,38 +52,29 @@ class ShopReadWithAddress(ShopRead):
 
 
 class ShopOrderSummary(SQLModel):
-    """
-    (View 1) Model สำหรับแสดง "รายการออเดอร์" (แบบสรุป)
-    - วันที่, ราคารวม (ของร้านนี้), ชื่อลูกค้า
-    """
+
     Order_ID: int
     Order_Date: datetime
     Paid_Status: str
-    Customer_Name: str # 👈 (ชื่อลูกค้า)
+    Customer_Name: str 
     Total_Price_For_Shop: Decimal 
 
 class ShopOrderDetails(SQLModel):
-    """
-    (View 2) Model สำหรับแสดง "รายละเอียดออเดอร์"
-    - ชื่อลูกค้า, วันที่, รายการสินค้า (รูป, ชื่อ, จำนวน, ราคา), ราคารวม
-    """
+
     Order_ID: int
     Order_Date: datetime
     Paid_Status: str
-    Customer_Name: str # 👈 (ชื่อลูกค้า)
+    Customer_Name: str 
     
-    Items: List[OrderItemPublic] # 👈 (รายการสินค้า)
+    Items: List[OrderItemPublic] 
     Total_Price_For_Shop: Decimal
 
 
-# 🔽 --- โมเดลนี้ที่คุณเพิ่งแก้ไข ถูกต้องครับ --- 🔽
 class ShopPublicCard(SQLModel):
-    """
-    Model สำหรับแสดง Card UI (ข้อมูลร้านค้าแบบย่อ - สาธารณะ)
-    """
+
     Shop_ID: int
     Shop_Name: str
-    Shop_Phone: Optional[str] = None # 👈 (เพิ่ม Optional[str] = None ดีกว่า)
+    Shop_Phone: Optional[str] = None 
     Cover_Img_Url: Optional[str] = None
 
 
