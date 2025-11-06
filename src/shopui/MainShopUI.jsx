@@ -54,7 +54,7 @@ function normalizeSell(it) {
     name: it.Product_Name ?? it.name ?? "Unnamed",
     price: priceNum,
     stock: Number(it.Stock ?? it.stock ?? 0),
-    image: it.Cover_Image || it.image || "/IMG1/bagG.png",
+    image: it.Cover_Image || it.image,
   };
 }
 
