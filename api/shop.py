@@ -6,13 +6,11 @@ import crud.shop as crud_shop
 from decimal import Decimal
 from sqlmodel import SQLModel, Field 
 
-
 from security import get_current_user
 from models.user import User
 
 from models.shop import ShopCreate, ShopOrderDetails, ShopOrderSummary, ShopRead, ShopCreateBody 
 from models.sell import SellItemCreate, SellRead
-
 
 from models.category import Category
 from models.brand import Brand
@@ -27,7 +25,6 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 class SellItemCreateByName(SQLModel):
-
     Product_Name: str
     Category_Name: str 
     Brand_Name: str    
@@ -41,7 +38,6 @@ def create_my_shop(
     session: SessionDep,
     current_user: CurrentUser
 ):
-
     
     full_shop_data = ShopCreate(
         Shop_Name=shop_data.Shop_Name,
@@ -58,7 +54,7 @@ def create_my_shop(
         if "not found" in error_msg:
             raise HTTPException(status_code=404, detail=error_msg)
         elif "already owns" in error_msg:
-            raise HTTPException(status_code=409, detail=error_msg)
+            raise HTTPException(status_code=409, detail=error_msg) 
         else:
             raise HTTPException(status_code=400, detail=error_msg)
 
@@ -70,7 +66,6 @@ def add_item_to_my_shop(
     session: SessionDep,
     current_user: CurrentUser 
 ):
-
     try:
         sell_item = crud_shop.create_shop_product(
             db=session, 
@@ -103,7 +98,6 @@ def add_item_to_my_shop_by_name(
     session: SessionDep,
     current_user: CurrentUser 
 ):
-
     category_statement = select(Category).where(Category.Category_Name == item_data.Category_Name)
     category = session.exec(category_statement).first()
     
@@ -139,7 +133,6 @@ def add_item_to_my_shop_by_name(
         )
         return sell_item
     
-
     except ValueError as e: 
         error_msg = str(e)
         if "not found" in error_msg:
@@ -161,7 +154,6 @@ def get_my_shop_orders(
     session: SessionDep,
     current_user: CurrentUser
 ):
-
     if not current_user.shops:
         raise HTTPException(status_code=404, detail="User does not own a shop")
         
@@ -211,7 +203,6 @@ def read_current_shop_profile(
     session: SessionDep,
     current_user: CurrentUser 
 ):
-
     
     if not current_user.shops:
         raise HTTPException(
@@ -241,13 +232,12 @@ def read_shop_profile_public(
     shop_id: int,
     session: SessionDep,
 ):
-
     shop = crud_shop.get_shop_details_by_id(db=session, shop_id=shop_id)
     
     if not shop:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"ไม่พบร้านค้า ID {shop_d}"
+            detail=f"ไม่พบร้านค้า ID {shop_id}" 
         )
         
     return shop

@@ -1,6 +1,6 @@
 from decimal import Decimal
 from typing import List
-from pymysql import IntegrityError
+from pymysql.err import IntegrityError
 from sqlalchemy import func
 from sqlmodel import Session, select
 from models.images import Image
@@ -14,29 +14,29 @@ from sqlalchemy.orm import joinedload
 
 def create_shop(db: Session, shop_data: ShopCreate) -> Shop:
     """
-    สร้างร้านค้าใหม่ (Shop) - (ยังไม่มีที่อยู่)
+    สร้างร้านค้าใหม่ (Shop)
+    (แก้ไขให้ใช้ get_session commit/rollback)
     """
     user = db.get(User, shop_data.User_ID)
     if not user:
         raise ValueError(f"User with ID {shop_data.User_ID} not found")
         
     new_shop = Shop.model_validate(shop_data)
-    db.add(new_shop)
     
     try:
-        db.commit() 
+        db.add(new_shop)
+        db.flush() 
         db.refresh(new_shop)
         return new_shop
     except IntegrityError:
-        db.rollback()
         raise ValueError(f"User {shop_data.User_ID} already owns a shop")
     except Exception as e:
-        db.rollback()
         raise e
 
 def get_shop(db: Session, shop_id: int) -> Shop | None:
     statement = select(Shop).where(Shop.Shop_ID == shop_id).options(joinedload(Shop.address))
     return db.exec(statement).first()
+
 def create_shop_product(
     db: Session, 
     shop_id: int, 
@@ -86,34 +86,40 @@ def create_shop_product(
     new_sell_item = Sell.model_validate(sell_data)
     
     db.add(new_sell_item)
-    db.commit()
+    db.flush() 
     db.refresh(new_sell_item)
     return new_sell_item
 
 
 def get_orders_for_shop(db: Session, shop_id: int) -> List[ShopOrderSummary]:
-
+    """
+    แก้ไข: ดึงยอดรวมสุทธิ (Total_Price) จากตาราง Order
+    (และแก้ไขการ JOIN ที่ซ้ำซ้อน)
+    """
+    
     statement = (
         select(
             Order.Order_ID,
             Order.Order_Date,
             Order.Paid_Status,
             User.Name.label("Customer_Name"), 
-            func.sum(OrderItems.Price_At_Purchase * OrderItems.Quantity).label("Total_Price_For_Shop")
+            
+            Order.Total_Price.label("Total_Price_For_Shop")
         )
-        .join(Order, Order.Order_ID == OrderItems.Order_ID)
+        .join(OrderItems, Order.Order_ID == OrderItems.Order_ID) 
         .join(Sell, Sell.Sell_ID == OrderItems.Sell_ID)
         .join(User, User.User_ID == Order.User_ID) 
         .where(Sell.Shop_ID == shop_id) 
-        .group_by(Order.Order_ID, Order.Order_Date, Order.Paid_Status, User.Name) 
+        .distinct() 
         .order_by(Order.Order_Date.desc())
     )
     
     results = db.exec(statement).all()
     
     return [ShopOrderSummary.model_validate(res) for res in results]
-def get_order_details_for_shop(db: Session, order_id: int, shop_id: int) -> ShopOrderDetails | None:
 
+
+def get_order_details_for_shop(db: Session, order_id: int, shop_id: int) -> ShopOrderDetails | None:
     order_main = db.exec(
         select(Order, User.Name.label("Customer_Name"))
         .join(User, User.User_ID == Order.User_ID)
@@ -140,13 +146,14 @@ def get_order_details_for_shop(db: Session, order_id: int, shop_id: int) -> Shop
         raise PermissionError("This order does not contain items from your shop")
 
     public_items_list = []
-    total_price_for_shop = Decimal("0.00")
+    total_price_for_shop = Decimal("0.00") 
 
     for order_item, product, image in item_results:
         total_price_for_shop += (order_item.Price_At_Purchase * order_item.Quantity)
         
         item_details = ItemPublic(
-            Sell_ID=order_item.Sell_ID, 
+            Sell_ID=order_item.Sell_ID,
+            Product_ID=product.Product_ID, 
             Product_Name=product.Product_Name,
             Price=order_item.Price_At_Purchase, 
             Stock=0, 
@@ -168,12 +175,11 @@ def get_order_details_for_shop(db: Session, order_id: int, shop_id: int) -> Shop
         Paid_Status=order.Paid_Status,
         Customer_Name=customer_name,
         Items=public_items_list,
-        Total_Price_For_Shop=total_price_for_shop
+        Total_Price_For_Shop=total_price_for_shop 
     )
 
 
 def get_shop_details_by_id(db: Session, shop_id: int) -> Shop | None:
-
     stmt = (
         select(Shop)
         .where(Shop.Shop_ID == shop_id)

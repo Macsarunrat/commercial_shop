@@ -42,6 +42,7 @@ def get_cart_items_by_user(db: Session, user_id: int) -> List[CartItemPublic]:
         
         item_public_data = ItemPublic(
             Sell_ID=sell_details.Sell_ID,
+            Product_ID=product_details.Product_ID,
             Product_Name=product_details.Product_Name,
             Price=sell_details.Price,
             Stock=sell_details.Stock,

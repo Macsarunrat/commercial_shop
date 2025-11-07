@@ -1,13 +1,12 @@
-# api/images.py
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from models.images import ImageRead
+from models.images import ImageRead, ImageReadWithProduct
 from typing import List, Annotated
 from sqlmodel import Session
 from database import get_session
 import crud.images as crud_images
 import os
 import uuid
-import aiofiles  # 1. Import aiofiles
+import aiofiles  
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -19,13 +18,10 @@ router = APIRouter(
     tags=["image"]
 )
 
-@router.get("/", response_model=List[ImageRead])
+@router.get("/", response_model=List[ImageReadWithProduct])
 def read_image(session: SessionDep):
-    # ฟังก์ชันนี้เป็น Sync OK ไม่มีปัญหา
     return crud_images.read_images(session)
 
-
-# 2. เปลี่ยนเป็น async def
 @router.post("/product/{product_id}", response_model=ImageRead)
 async def create_cover_image(
     session: SessionDep, 
@@ -43,27 +39,24 @@ async def create_cover_image(
     file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
     
     try:
-        # 3. เปลี่ยนมาใช้ aiofiles แบบ async
         async with aiofiles.open(file_path, "wb") as buffer:
-            content = await file.read()  # อ่านไฟล์แบบ async
-            await buffer.write(content)  # เขียนไฟล์แบบ async
+            content = await file.read()  
+            await buffer.write(content) 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
     
     img_src = f"/{file_path}"
     
     try:
-        # ส่วนนี้ยังคงเป็น Sync DB Call ซึ่งโอเคสำหรับตอนนี้
         new_image = crud_images.upload_cover_image(session, product_id, img_src)
         return new_image
     except ValueError as ve:
-        os.remove(file_path) # จัดการ Error ยอดเยี่ยมเหมือนเดิม
+        os.remove(file_path) 
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        os.remove(file_path) # จัดการ Error ยอดเยี่ยมเหมือนเดิม
+        os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Failed to upload cover image: {str(e)}")
 
-# 4. เปลี่ยนเป็น async def
 @router.post("/products/{product_id}", response_model=List[ImageRead])
 async def create_images(
     session: SessionDep, 
@@ -88,10 +81,9 @@ async def create_images(
             unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
             file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
             
-            # 5. เปลี่ยนมาใช้ aiofiles แบบ async
             async with aiofiles.open(file_path, "wb") as buffer:
-                content = await file.read()  # อ่านไฟล์แบบ async
-                await buffer.write(content)  # เขียนไฟล์แบบ async
+                content = await file.read()  
+                await buffer.write(content)  
 
             img_src = f"/{file_path}"
             img_srcs.append(img_src)
@@ -103,7 +95,6 @@ async def create_images(
         raise HTTPException(status_code=500, detail=f"Failed to save files: {str(e)}")
     
     try:
-        # ส่วนนี้ยังคงเป็น Sync DB Call
         new_images = crud_images.create_non_cover_image(session, product_id, img_srcs)
         return new_images
     except ValueError as ve:

@@ -4,6 +4,7 @@ from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime
 from models.order import THAI_TZ 
+import math 
 
 from models.order import Order, OrderSummary, OrderDetailsPublic, OrderCheckoutRequest
 from models.orderitems import OrderItems, OrderItemPublic
@@ -15,8 +16,35 @@ from models.images import Image
 from models.cart import Cart
 from models.shoporders import Shop_Orders
 
-def get_orders_by_user(db: Session, user_id: int) -> List[OrderSummary]:
 
+def _calculate_shipping_cost(total_price: Decimal) -> Decimal:
+    """
+    คำนวณค่าจัดส่งโดยอ้างอิงจากราคารวม (Logic จาก Frontend)
+    """
+    total_price_decimal = Decimal(total_price)
+    
+    if total_price_decimal > Decimal("999"):
+        return Decimal("0.00")
+
+    if total_price_decimal < Decimal("100"):
+        return Decimal("50.00")
+
+    base_price = Decimal("100")
+    max_price = Decimal("999")
+    min_shipping = Decimal("100")
+    max_shipping = Decimal("250")
+
+    price_range = max_price - base_price
+    shipping_range = max_shipping - min_shipping
+    
+    price_diff = total_price_decimal - base_price
+    
+    shipping_cost = (price_diff / price_range) * shipping_range + min_shipping
+
+    return Decimal(math.floor(shipping_cost)).quantize(Decimal("0.01"))
+
+
+def get_orders_by_user(db: Session, user_id: int) -> List[OrderSummary]:
     user = db.get(User, user_id)
     if not user:
         raise ValueError(f"User with ID {user_id} not found")
@@ -38,8 +66,8 @@ def get_orders_by_user(db: Session, user_id: int) -> List[OrderSummary]:
         ) for order in orders
     ]
 
-def get_order_details_for_user(db: Session, order_id: int, user_id: int) -> Optional[OrderDetailsPublic]:
 
+def get_order_details_for_user(db: Session, order_id: int, user_id: int) -> Optional[OrderDetailsPublic]:
     statement = (
         select(Order)
         .where(Order.Order_ID == order_id, Order.User_ID == user_id) 
@@ -71,6 +99,7 @@ def get_order_details_for_user(db: Session, order_id: int, user_id: int) -> Opti
         
         item_details = ItemPublic(
             Sell_ID=sell.Sell_ID,
+            Product_ID=product.Product_ID, 
             Product_Name=product.Product_Name,
             Price=sell.Price, 
             Stock=sell.Stock,
@@ -105,6 +134,7 @@ def get_order_details_for_user(db: Session, order_id: int, user_id: int) -> Opti
     
     return order_details
 
+
 def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderCheckoutRequest) -> Order:
     cart_items_statement = select(Cart).where(Cart.User_ID == user_id).options(joinedload(Cart.sell_item))
     cart_items = db.exec(cart_items_statement).all()
@@ -112,7 +142,7 @@ def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderChecko
     if not cart_items:
         raise ValueError("Cart is empty. Cannot create order.")
 
-    backend_total_price = Decimal("0.00")
+    backend_subtotal_price = Decimal("0.00") 
     items_to_process = [] 
     shop_ids = set() 
 
@@ -123,29 +153,35 @@ def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderChecko
         sell_item = item.sell_item
             
         if item.Quantity > sell_item.Stock:
-            raise ValueError(f"Not enough stock for item {sell_item.Product_ID}. Requested: {item.Quantity}, Available: {sell_item.Stock}")
+            raise ValueError(f"Not enough stock for item {sell_item.Product_ID}.")
             
-        backend_total_price += (sell_item.Price * item.Quantity)
+        backend_subtotal_price += (sell_item.Price * item.Quantity)
         items_to_process.append((item, sell_item))
         shop_ids.add(sell_item.Shop_ID)
+    
+    backend_ship_cost = _calculate_shipping_cost(backend_subtotal_price)
+    
+    final_grand_total = backend_subtotal_price + backend_ship_cost
     
     new_order = Order(
         Order_Date=datetime.now(THAI_TZ), 
         User_ID=user_id,
         Paid_Type_ID=checkout_data.Paid_Type_ID,
-        Total_Price=backend_total_price, 
-        Total_Weight=checkout_data.Total_Weight,
-        Ship_Cost=checkout_data.Ship_Cost,
+        
+        Total_Price=final_grand_total,      
+        Total_Weight=checkout_data.Total_Weight, 
+        Ship_Cost=backend_ship_cost,        
+        
         Paid_Status=checkout_data.Paid_Status
     )
     db.add(new_order)
-    db.commit()
-    db.refresh(new_order) 
+    
+    db.flush()
 
     for cart_item, sell_item in items_to_process:
         
         order_item_entry = OrderItems(
-            Order_ID=new_order.Order_ID,
+            Order_ID=new_order.Order_ID, 
             Sell_ID=sell_item.Sell_ID,
             Quantity=cart_item.Quantity,
             Price_At_Purchase=sell_item.Price 
@@ -163,9 +199,8 @@ def create_order_from_cart(db: Session, user_id: int, checkout_data: OrderChecko
             Order_ID=new_order.Order_ID
         )
         db.add(shop_order_link)
-
-    db.commit()
     
+    db.refresh(new_order) 
     return new_order
 
 
@@ -183,7 +218,5 @@ def mark_order_as_paid(db: Session, order_id: int, user_id: int) -> Order:
 
     order.Paid_Status = "Success"
     db.add(order)
-    db.commit()
-    db.refresh(order)
     
-    return order
+    return order 

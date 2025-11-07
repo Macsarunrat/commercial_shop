@@ -36,6 +36,7 @@ class SellCreate(SellBase):
 
 class ItemPublic(SQLModel):
     Sell_ID: int
+    Product_ID: int
     Product_Name: str
     Price: Decimal
     Stock: int
@@ -43,12 +44,10 @@ class ItemPublic(SQLModel):
     Cover_Image: Optional[str] = None
 
 class SellItemCreate(SQLModel):
-    # ข้อมูลสำหรับค้นหา หรือ สร้าง Product
     Product_Name: str
     Category_ID: int
     Brand_ID: int
     
-    # ข้อมูลสำหรับสร้าง Sell
     Price: Decimal
     Stock: int
 

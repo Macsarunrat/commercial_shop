@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-# from database import create_db_and_tables
 from database import create_db_and_tables
 from api import products, category, brand, image, paidtype, storefront, cart, orders, user, user_address, shop, shop_address, sell, shop_image
 import os

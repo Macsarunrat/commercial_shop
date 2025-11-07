@@ -21,7 +21,6 @@ def get_my_orders(
     session: SessionDep,
     current_user: CurrentUser
 ):
-
     orders = crud_order.get_orders_by_user(session, current_user.User_ID)
     return orders
 
@@ -31,7 +30,6 @@ def get_my_order_details(
     session: SessionDep,
     current_user: CurrentUser
 ):
-
     details = crud_order.get_order_details_for_user(
         db=session, 
         order_id=order_id, 
@@ -49,7 +47,6 @@ def checkout_my_cart(
     session: SessionDep,
     current_user: CurrentUser
 ):
-
     try:
         new_order = crud_order.create_order_from_cart(
             db=session,
@@ -62,7 +59,6 @@ def checkout_my_cart(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-    
 
 @router.post("/{order_id}/confirm_payment", response_model=OrderSummary)
 def confirm_simulated_payment(
@@ -70,7 +66,6 @@ def confirm_simulated_payment(
     session: SessionDep,
     current_user: CurrentUser
 ):
-
     try:
         updated_order = crud_order.mark_order_as_paid(
             db=session,

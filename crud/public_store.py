@@ -19,6 +19,7 @@ def _map_to_public(sell_item: Sell) -> ItemPublic:
     
     return ItemPublic(
         Sell_ID=sell_item.Sell_ID,
+        Product_ID=sell_item.Product_ID,
         Product_Name=sell_item.product_details.Product_Name,
         Price=sell_item.Price,
         Stock=sell_item.Stock,
