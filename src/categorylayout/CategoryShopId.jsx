@@ -13,7 +13,7 @@ import ButtonSort from "../ObjectDetailCategory/ButtonSort";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useMemo } from "react";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 export default function CategoryShopId() {
@@ -46,7 +46,7 @@ export default function CategoryShopId() {
         setError(null);
         const url = `${API}/store/brands-by-category/${categoryIdNum}`;
         const res = await fetch(url, { signal: ctl.signal, headers: HDRS });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`ไม่พบแบรนด์ของสินค้า`);
         const json = await res.json(); // [{ Brand_ID, Brand_Name }]
         setBrandList(Array.isArray(json) ? json : json?.items ?? []);
         setSelectedBrandId(null);

@@ -12,7 +12,7 @@ import AppTheme from "../theme/AppTheme";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 
-const BASE_URL = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const BASE_URL = "https://ritzily-nebule-clark.ngrok-free.dev";
 
 export default function Login() {
   const navigate = useNavigate();

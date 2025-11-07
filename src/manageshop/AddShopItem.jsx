@@ -12,12 +12,14 @@ import {
   Alert,
   InputAdornment,
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
+import CircularProgress from "@mui/material/CircularProgress";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import AppTheme from "../theme/AppTheme";
 
 /* ----------------- Config ----------------- */
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ----------------- Helpers ---------------- */
@@ -69,6 +71,22 @@ async function apiAddItemByName(shopId, payload, token) {
   });
 }
 
+// list category / brand
+async function apiListCategories(signal) {
+  const res = await fetch(`${API}/category`, { headers: HDRS, signal });
+  if (!res.ok) throw new Error(await readNiceError(res));
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data?.items ?? [];
+  return list.map((c) => c?.Category_Name ?? c?.category_name).filter(Boolean);
+}
+async function apiListBrands(signal) {
+  const res = await fetch(`${API}/brand`, { headers: HDRS, signal });
+  if (!res.ok) throw new Error(await readNiceError(res));
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data?.items ?? [];
+  return list.map((b) => b?.Brand_Name ?? b?.brand_name).filter(Boolean);
+}
+
 // สร้างหมวดหมู่ใหม่
 async function apiCreateCategory(name) {
   const res = await fetch(`${API}/category/NewCategory`, {
@@ -114,19 +132,24 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
   const [busy, setBusy] = React.useState(false);
   const [successMsg, setSuccessMsg] = React.useState("");
 
-  // กล่อง “เพิ่มหมวดหมู่ด่วน”
+  // quick add boxes
   const [catName, setCatName] = React.useState("");
   const [catSaving, setCatSaving] = React.useState(false);
   const [catError, setCatError] = React.useState("");
   const [catSuccess, setCatSuccess] = React.useState("");
 
-  // กล่อง “เพิ่มแบรนด์ด่วน”
   const [brandName, setBrandName] = React.useState("");
   const [brandSaving, setBrandSaving] = React.useState(false);
   const [brandError, setBrandError] = React.useState("");
   const [brandSuccess, setBrandSuccess] = React.useState("");
 
-  // ปุ่มด่วน ให้ความกว้างเท่ากัน (responsive)
+  // options + loading for Autocomplete
+  const [catOptions, setCatOptions] = React.useState([]);
+  const [brandOptions, setBrandOptions] = React.useState([]);
+  const [loadingCats, setLoadingCats] = React.useState(false);
+  const [loadingBrands, setLoadingBrands] = React.useState(false);
+
+  // ปุ่มด่วน
   const quickBtnSx = {
     width: { xs: "100%", sm: 180 },
     height: 56,
@@ -170,6 +193,60 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopIdProp, shopIdParam, token]);
 
+  // load options (categories/brands) + refresh when quick add fired
+  React.useEffect(() => {
+    const ctl = new AbortController();
+    (async () => {
+      try {
+        setLoadingCats(true);
+        setCatOptions(await apiListCategories(ctl.signal));
+      } catch {
+        setCatOptions([]);
+      } finally {
+        setLoadingCats(false);
+      }
+    })();
+    const h = () => {
+      // soft refresh
+      (async () => {
+        try {
+          setCatOptions(await apiListCategories());
+        } catch {}
+      })();
+    };
+    window.addEventListener("categories:refresh", h);
+    return () => {
+      ctl.abort();
+      window.removeEventListener("categories:refresh", h);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const ctl = new AbortController();
+    (async () => {
+      try {
+        setLoadingBrands(true);
+        setBrandOptions(await apiListBrands(ctl.signal));
+      } catch {
+        setBrandOptions([]);
+      } finally {
+        setLoadingBrands(false);
+      }
+    })();
+    const h = () => {
+      (async () => {
+        try {
+          setBrandOptions(await apiListBrands());
+        } catch {}
+      })();
+    };
+    window.addEventListener("brands:refresh", h);
+    return () => {
+      ctl.abort();
+      window.removeEventListener("brands:refresh", h);
+    };
+  }, []);
+
   const chg = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
@@ -180,19 +257,14 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
   function validate() {
     const err = {};
     if (!form.Product_Name.trim()) err.Product_Name = "กรุณากรอกชื่อสินค้า";
-
     const price = Number(form.Price);
     if (!Number.isFinite(price) || price < 0) err.Price = "กรอกราคาให้ถูกต้อง";
-
     const stock = Number(form.Stock);
     if (!Number.isInteger(stock) || stock < 0)
       err.Stock = "กรอกสต็อกเป็นจำนวนเต็ม ≥ 0";
-
     if (!form.Category_Name.trim())
-      err.Category_Name = "กรุณาระบุ Category_Name (ต้องเป็นชื่อที่มีอยู่จริง)";
-    if (!form.Brand_Name.trim())
-      err.Brand_Name = "กรุณาระบุ Brand_Name (ต้องเป็นชื่อที่มีอยู่จริง)";
-
+      err.Category_Name = "กรุณาเลือก Category_Name";
+    if (!form.Brand_Name.trim()) err.Brand_Name = "กรุณาเลือก Brand_Name";
     setErrors(err);
     return Object.keys(err).length === 0;
   }
@@ -232,32 +304,13 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
       });
       setErrors({});
     } catch (err) {
-      const msg = String(err?.message || "");
-      if (
-        msg.toLowerCase().includes("category") &&
-        msg.toLowerCase().includes("not found")
-      ) {
-        setPageError("เพิ่มสินค้าไม่สำเร็จ: ไม่พบ Category_Name ในระบบ");
-      } else if (
-        msg.toLowerCase().includes("brand") &&
-        msg.toLowerCase().includes("not found")
-      ) {
-        setPageError("เพิ่มสินค้าไม่สำเร็จ: ไม่พบ Brand_Name ในระบบ");
-      } else if (
-        msg.toLowerCase().includes("duplicate") ||
-        msg.includes("1062") ||
-        msg.includes("unique")
-      ) {
-        setPageError("เพิ่มสินค้าไม่สำเร็จ: ข้อมูลซ้ำ/ผิดเงื่อนไข unique");
-      } else {
-        setPageError(msg || "เพิ่มสินค้าไม่สำเร็จ");
-      }
+      setPageError(String(err?.message || "เพิ่มสินค้าไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
   };
 
-  // เพิ่มหมวดหมู่ด่วน
+  // quick create handlers
   async function handleQuickCreateCategory() {
     setCatError("");
     setCatSuccess("");
@@ -270,7 +323,7 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
       setCatSaving(true);
       await apiCreateCategory(v);
       setCatSuccess(`เพิ่มหมวดหมู่ “${v}” เรียบร้อย`);
-      setForm((f) => ({ ...f, Category_Name: v })); // เติมเข้าฟอร์ม
+      setForm((f) => ({ ...f, Category_Name: v }));
       setCatName("");
       window.dispatchEvent(new Event("categories:refresh"));
     } catch (e) {
@@ -280,7 +333,6 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
     }
   }
 
-  // เพิ่มแบรนด์ด่วน
   async function handleQuickCreateBrand() {
     setBrandError("");
     setBrandSuccess("");
@@ -293,7 +345,7 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
       setBrandSaving(true);
       await apiCreateBrand(v);
       setBrandSuccess(`เพิ่มแบรนด์ “${v}” เรียบร้อย`);
-      setForm((f) => ({ ...f, Brand_Name: v })); // เติมเข้าฟอร์ม
+      setForm((f) => ({ ...f, Brand_Name: v }));
       setBrandName("");
       window.dispatchEvent(new Event("brands:refresh"));
     } catch (e) {
@@ -307,7 +359,7 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
   return (
     <AppTheme>
       <Box sx={{ maxWidth: 780, mx: "auto", px: 2, py: 4 }}>
-        {/* กล่อง “เพิ่มหมวดหมู่ด่วน” */}
+        {/* เพิ่มหมวดหมู่ด่วน */}
         <Card variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
           <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
             <Typography fontWeight={700} sx={{ mb: 1 }}>
@@ -330,7 +382,11 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
                 onClick={handleQuickCreateCategory}
                 variant="contained"
                 disabled={catSaving}
-                sx={quickBtnSx}
+                sx={{
+                  width: { xs: "100%", sm: 180 },
+                  height: 56,
+                  borderRadius: 2,
+                }}
               >
                 {catSaving ? "กำลังบันทึก..." : "เพิ่มหมวดหมู่"}
               </Button>
@@ -348,7 +404,7 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
           </CardContent>
         </Card>
 
-        {/* กล่อง “เพิ่มแบรนด์” */}
+        {/* เพิ่มแบรนด์ด่วน */}
         <Card variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
           <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
             <Typography fontWeight={700} sx={{ mb: 1 }}>
@@ -371,7 +427,11 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
                 onClick={handleQuickCreateBrand}
                 variant="contained"
                 disabled={brandSaving}
-                sx={quickBtnSx}
+                sx={{
+                  width: { xs: "100%", sm: 180 },
+                  height: 56,
+                  borderRadius: 2,
+                }}
               >
                 {brandSaving ? "กำลังบันทึก..." : "เพิ่มแบรนด์"}
               </Button>
@@ -389,7 +449,7 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
           </CardContent>
         </Card>
 
-        {/* กล่อง “เพิ่มสินค้าใหม่” */}
+        {/* เพิ่มสินค้าใหม่ */}
         <Card
           variant="outlined"
           sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}
@@ -509,66 +569,117 @@ export default function ShopAddItem({ shopId: shopIdProp }) {
                       />
                     </Grid>
 
+                    {/* Category — Autocomplete */}
                     <Grid item xs={12} md={6}>
-                      <TextField
-                        variant="outlined"
-                        size="medium"
-                        fullWidth
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            height: 56,
-                            alignItems: "center",
-                          },
-                          "& .MuiInputBase-input": { padding: "16.5px 14px" },
-                          "& .MuiFormHelperText-root": { minHeight: 22 },
-                        }}
-                        label="Category_Name *"
-                        name="Category_Name"
-                        value={form.Category_Name}
-                        onChange={chg}
-                        error={!!errors.Category_Name}
-                        helperText={
-                          errors.Category_Name ||
-                          "ต้องเป็นชื่อหมวดหมู่ที่มีอยู่จริง"
+                      <Autocomplete
+                        options={catOptions}
+                        loading={loadingCats}
+                        value={form.Category_Name || null}
+                        onChange={(_, v) =>
+                          chg({
+                            target: { name: "Category_Name", value: v || "" },
+                          })
                         }
+                        size="medium"
+                        disableClearable
+                        autoHighlight
+                        openOnFocus
+                        noOptionsText="ไม่พบหมวดหมู่"
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Category_Name *"
+                            error={!!errors.Category_Name}
+                            helperText={
+                              errors.Category_Name ||
+                              "เลือกหมวดหมู่ที่มีอยู่จริง"
+                            }
+                            sx={{
+                              "& .MuiInputBase-root": {
+                                height: 56,
+                                alignItems: "center",
+                              },
+                              "& .MuiFormHelperText-root": { minHeight: 22 },
+                            }}
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {loadingCats ? (
+                                    <CircularProgress
+                                      size={18}
+                                      sx={{ mr: 1 }}
+                                    />
+                                  ) : null}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
                       />
                     </Grid>
 
+                    {/* Brand — Autocomplete */}
                     <Grid item xs={12} md={6}>
-                      <TextField
-                        variant="outlined"
-                        size="medium"
-                        fullWidth
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            height: 56,
-                            alignItems: "center",
-                          },
-                          "& .MuiInputBase-input": { padding: "16.5px 14px" },
-                          "& .MuiFormHelperText-root": { minHeight: 22 },
-                        }}
-                        label="Brand_Name *"
-                        name="Brand_Name"
-                        value={form.Brand_Name}
-                        onChange={chg}
-                        error={!!errors.Brand_Name}
-                        helperText={
-                          errors.Brand_Name || "ต้องเป็นชื่อแบรนด์ที่มีอยู่จริง"
+                      <Autocomplete
+                        options={brandOptions}
+                        loading={loadingBrands}
+                        value={form.Brand_Name || null}
+                        onChange={(_, v) =>
+                          chg({
+                            target: { name: "Brand_Name", value: v || "" },
+                          })
                         }
+                        size="medium"
+                        disableClearable
+                        autoHighlight
+                        openOnFocus
+                        noOptionsText="ไม่พบแบรนด์"
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Brand_Name *"
+                            error={!!errors.Brand_Name}
+                            helperText={
+                              errors.Brand_Name || "เลือกแบรนด์ที่มีอยู่จริง"
+                            }
+                            sx={{
+                              "& .MuiInputBase-root": {
+                                height: 56,
+                                alignItems: "center",
+                              },
+                              "& .MuiFormHelperText-root": { minHeight: 22 },
+                            }}
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {loadingBrands ? (
+                                    <CircularProgress
+                                      size={18}
+                                      sx={{ mr: 1 }}
+                                    />
+                                  ) : null}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
                       />
                     </Grid>
                   </Grid>
 
-                  <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      size="large"
-                      disabled={busy}
-                    >
-                      {busy ? "กำลังเพิ่ม..." : "เพิ่มสินค้า"}
-                    </Button>
-                  </Stack>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    disabled={busy}
+                    sx={{ mt: 1 }}
+                  >
+                    {busy ? "กำลังเพิ่ม..." : "เพิ่มสินค้า"}
+                  </Button>
                 </Box>
               </>
             )}

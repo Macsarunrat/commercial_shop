@@ -1,39 +1,32 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardMedia from "@mui/material/CardMedia";
 import Typography from "@mui/material/Typography";
-import Stack from "@mui/material/Stack";
-import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
-
-import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
 import Skeleton from "@mui/material/Skeleton";
+import Avatar from "@mui/material/Avatar";
 import AppTheme from "../theme/AppTheme";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import Addimg from "./Addimg";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
-/** ตัวช่วยประกอบ query string (ตัดค่า null/undefined/"") ออก */
-const CARD_W = 220; // ความกว้างการ์ด “เท่ากันทุกใบ”
-const CARD_H = 320; // ความสูงการ์ด “เท่ากันทุกใบ”
-const IMG_H = 180; // ความสูงรูปคงที่
-/* ================================== */
+const CARD_W = 220;
+const CARD_H = 320;
+const IMG_H = 180;
 
+/* ------------------- normalizers ------------------- */
 function normalizeShop(it) {
   if (!it) return null;
   return {
     id: it.Shop_ID ?? it.shop_id ?? null,
     name: it.Shop_Name ?? it.name ?? "",
     phone: it.Shop_Phone ?? it.phone ?? "",
-    logo: it.Cover_Img_Url ?? it.logo ?? "/IMG1/bagG.png",
+    logo: it.Cover_Img_Url ?? it.logo ?? "", // ให้ Avatar ตัดสินใจ fallback
   };
 }
-
 function normalizeSell(it) {
   if (!it) return null;
   const priceNum =
@@ -45,7 +38,7 @@ function normalizeSell(it) {
     name: it.Product_Name ?? it.name ?? "Unnamed",
     price: priceNum,
     stock: Number(it.Stock ?? it.stock ?? 0),
-    image: it.Cover_Image || it.image || "/IMG1/bagG.png",
+    image: it.Cover_Image || it.image || "", // ใช้รูปจาก /image เป็นหลัก
   };
 }
 
@@ -57,6 +50,19 @@ export default function StoreShowUI() {
   const [shop, setShop] = React.useState(null);
   const [items, setItems] = React.useState([]);
 
+  // map รูปตาม Product_ID (string) -> { url, isCover }
+  const [imgMap, setImgMap] = React.useState(new Map());
+
+  // dialog อัปโหลดเมื่อคลิกการ์ด
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [activePid, setActivePid] = React.useState(null);
+
+  const openUploadFor = (pid) => {
+    setActivePid(pid);
+    setAddOpen(true);
+  };
+
+  // ----------- ดึงร้าน + สินค้า -----------
   React.useEffect(() => {
     if (!shopId) return;
     const controller = new AbortController();
@@ -76,7 +82,6 @@ export default function StoreShowUI() {
             headers: HDRS,
           }),
         ]);
-
         if (!shopsRes.ok) throw new Error(`shops HTTP ${shopsRes.status}`);
         if (!sellsRes.ok) throw new Error(`products HTTP ${sellsRes.status}`);
 
@@ -112,6 +117,51 @@ export default function StoreShowUI() {
 
     return () => controller.abort();
   }, [shopId]);
+
+  // ----------- ดึงรูปทั้งหมดจาก /image แล้ว map ตาม Product_ID -----------
+  const refreshImages = React.useCallback(
+    async (productIdSet) => {
+      try {
+        const res = await fetch(`${API}/image/`, { headers: HDRS });
+        if (!res.ok) throw new Error(`image HTTP ${res.status}`);
+        const list = await res.json();
+
+        const pidSet =
+          productIdSet ?? new Set(items.map((p) => String(p.productId)));
+
+        const map = new Map(); // pid -> {url,isCover}
+        (Array.isArray(list) ? list : []).forEach((im) => {
+          const pid = im?.Product_ID ?? im?.product_id;
+          const raw = im?.Img_Src ?? im?.img_src;
+          if (!pid || !raw) return;
+
+          const key = String(pid);
+          if (!pidSet.has(key)) return; // สนใจเฉพาะสินค้าของร้านนี้
+
+          const isCover = !!(im?.IsCover ?? im?.is_cover);
+          // ถ้า Img_Src เป็น path relative ให้เติม API
+          const url = String(raw).startsWith("http") ? raw : `${API}${raw}`;
+
+          const exist = map.get(key);
+          if (!exist || (isCover && !exist.isCover)) {
+            map.set(key, { url, isCover });
+          }
+        });
+
+        setImgMap(map);
+      } catch {
+        setImgMap(new Map());
+      }
+    },
+    [items]
+  );
+
+  // โหลดรูปครั้งแรกหลังได้ items แล้ว
+  React.useEffect(() => {
+    if (!items.length) return;
+    const ids = new Set(items.map((p) => String(p.productId)));
+    refreshImages(ids);
+  }, [items, refreshImages]);
 
   /* ---------- Loading / Error ---------- */
   if (loading) {
@@ -166,23 +216,31 @@ export default function StoreShowUI() {
   }
 
   const shopName = shop.name || `Shop ${shopId}`;
-  const shopLogo = shop.logo || "/IMG1/bagG.png";
 
   /* ----------------------------- UI ----------------------------- */
   return (
     <AppTheme>
       <Box sx={{ maxWidth: 1200, mx: "auto", mt: 5, px: 2, pb: 5 }}>
-        {/* หัวร้าน */}
+        {/* หัวร้าน: แสดงโลโก้เป็นอักษรแรกถ้าไม่มีภาพ */}
         <Card
           sx={{ p: 2, mb: 3, display: "flex", alignItems: "center", gap: 2 }}
         >
-          <CardMedia
-            component="img"
-            src={shopLogo}
+          <Avatar
+            src={shop.logo || undefined}
             alt={shopName}
-            sx={{ width: 64, height: 64, objectFit: "cover", borderRadius: 1 }}
-            onError={(e) => (e.currentTarget.src = "/IMG1/bagG.png")}
-          />
+            sx={{
+              width: 64,
+              height: 64,
+              bgcolor: "#f5f5f5",
+              color: "black",
+              fontWeight: 700,
+              fontSize: 24,
+            }}
+            slotProps={{ onError: (e) => (e.currentTarget.src = "") }}
+          >
+            {(shopName?.[0] || "S").toUpperCase()}
+          </Avatar>
+
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h6" fontWeight={800} noWrap>
               {shopName}
@@ -194,49 +252,67 @@ export default function StoreShowUI() {
             )}
           </Box>
         </Card>
+        <Box display="flex" gap={3} mb={2} alignItems="center">
+          <Typography variant="h6">สินค้าของร้านนี้</Typography>
 
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          สินค้าของร้านนี้
-        </Typography>
+          {/* ปุ่มอัปโหลดรวม (กรอก Product_ID เอง) */}
+          <Addimg
+            hideTrigger
+            open={addOpen}
+            onClose={() => setAddOpen(false)}
+            defaultProductId={activePid}
+            onUploaded={({ productId }) => {
+              setAddOpen(false);
+              // อัปเดตรูปเฉพาะสินค้าที่เพิ่งอัปโหลด
+              refreshImages(new Set([String(productId)]));
+            }}
+          />
+        </Box>
         <Divider sx={{ mb: 2 }} />
-
         {items.length === 0 ? (
           <Typography color="text.secondary">ร้านนี้ยังไม่มีสินค้า</Typography>
         ) : (
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: `repeat(auto-fill, ${CARD_W}px)`, // ★ กว้างเท่ากัน
+              gridTemplateColumns: `repeat(auto-fill, ${CARD_W}px)`,
               gap: 2,
-              justifyContent: "center", // ★ จัดกึ่งกลางทั้งแถว
+              justifyContent: "center",
             }}
           >
             {items.map((p) => {
+              const mapped = imgMap.get(String(p.productId));
               const img =
-                p.image &&
+                (mapped && mapped.url) ||
+                (p.image &&
                 (p.image.startsWith("/") || p.image.startsWith("http"))
-                  ? p.image
-                  : "/IMG1/bagG.png";
+                  ? p.image.startsWith("/")
+                    ? `${API}${p.image}`
+                    : p.image
+                  : "/IMG1/bagG.png");
 
               return (
                 <Card
-                  key={p.sellId ?? `${p.productId}-${Math.random()}`}
+                  key={p.sellId ?? `pid-${p.productId}`}
                   variant="outlined"
                   sx={{
-                    width: CARD_W, // ★ ล็อกกว้าง
-                    height: CARD_H, // ★ ล็อกสูง
+                    width: CARD_W,
+                    height: CARD_H,
                     borderRadius: 2,
                     p: 1.5,
                     display: "flex",
                     flexDirection: "column",
+                    cursor: "pointer",
                   }}
+                  title={`Product_ID: ${p.productId}`}
+                  onClick={() => openUploadFor(p.productId)} // ✅ กดการ์ดเพื่ออัปโหลดให้สินค้านี้
                 >
                   <CardMedia
                     component="img"
                     src={img}
                     alt={p.name || "-"}
                     sx={{
-                      height: IMG_H, // ★ รูปคงที่
+                      height: IMG_H,
                       objectFit: "cover",
                       borderRadius: 1,
                       flexShrink: 0,
@@ -253,17 +329,14 @@ export default function StoreShowUI() {
                       flex: 1,
                     }}
                   >
-                    {/* ชื่อ: บรรทัดเดียว + ellipsis */}
-                    <Typography
-                      variant="body2"
-                      title={p.name}
-                      noWrap // ★ ตัด ... กรณีกว้างเกิน
-                      sx={{ maxWidth: "100%" }}
-                    >
+                    <Typography variant="body2" title={p.name} noWrap>
                       {p.name ?? "-"}
                     </Typography>
 
-                    {/* ราคา */}
+                    <Typography variant="caption" color="text.secondary">
+                      Product_ID: {p.productId}
+                    </Typography>
+
                     <Typography
                       variant="subtitle2"
                       fontWeight={700}
@@ -272,7 +345,6 @@ export default function StoreShowUI() {
                       ฿{(p.price ?? 0).toLocaleString("th-TH")}
                     </Typography>
 
-                    {/* สต็อก: ชิดล่างเสมอ */}
                     <Typography
                       variant="caption"
                       color={p.stock > 0 ? "text.secondary" : "error.main"}

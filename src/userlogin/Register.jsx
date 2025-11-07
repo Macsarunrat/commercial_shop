@@ -12,7 +12,7 @@ import AppTheme from "../theme/AppTheme";
 import { useNavigate } from "react-router-dom";
 
 // 1. (สำคัญ) ตั้งค่า URL ของ API
-const API_URL = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API_URL = "https://ritzily-nebule-clark.ngrok-free.dev";
 
 export default function Register() {
   const navigate = useNavigate();

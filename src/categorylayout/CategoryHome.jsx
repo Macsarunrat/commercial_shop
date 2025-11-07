@@ -4,7 +4,7 @@ import { Box, Typography, Button } from "@mui/material";
 import AppTheme from "../theme/AppTheme";
 import AllCategories2 from "../categorylayout/AllCategories2";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 export default function CategoryHome() {

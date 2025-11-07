@@ -77,7 +77,7 @@ import { create } from "zustand";
 import { persist, devtools, createJSONStorage } from "zustand/middleware";
 import { jwtDecode } from "jwt-decode";
 
-const BASE_URL = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const BASE_URL = "https://ritzily-nebule-clark.ngrok-free.dev";
 const NGROK_HDR = { "ngrok-skip-browser-warning": "true" };
 
 // ต่ออายุล่วงหน้าก่อนหมดจริงกี่วินาที

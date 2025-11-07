@@ -1,4 +1,3 @@
-// src/cart/CartMui.jsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -15,21 +14,31 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import Skeleton from "@mui/material/Skeleton";
 import { useNavigate } from "react-router-dom";
 import AppTheme from "../theme/AppTheme";
-
 import useCartStore from "../stores/cartStore";
 import { useAuthStore } from "../stores/authStore";
-// ✅ ไม่ต้อง import server API ตรง ๆ แล้ว ให้ใช้ผ่าน store เท่านั้น
-// import { updateCartItemServer, removeCartItemServer } from "../cart/cartCon.jsx";
+import { calculateShippingCost } from "../lib/calculate"; // นำเข้าฟังก์ชันคำนวณค่าส่ง
+
+// ----- API base & helpers -----
+const API_BASE = "https://ritzily-nebule-clark.ngrok-free.dev";
+const HDRS = { "ngrok-skip-browser-warning": "true" };
+const imgFallback = "";
+
+function imageURL(path) {
+  if (!path) return "";
+  const u = new URL(path, API_BASE);
+  u.searchParams.set("ngrok-skip-browser-warning", "true");
+  return u.toString();
+}
 
 export default function CartMui({ canCheckout, selectedAddress }) {
   const navigate = useNavigate();
 
   // ----- Cart store -----
   const items = useCartStore((s) => s.items); // [{id,name,price,stock,image,qty}]
-  const cartCount = useCartStore((s) => s.cartCount()); // รวมชิ้น
-  const fetchCart = useCartStore((s) => s.fetchCart); // โหลดจากเซิร์ฟเวอร์
-  const setItemQtyLocal = useCartStore((s) => s.setItemQty); // อัปเดตจำนวน (store จะยิง API ให้)
-  const removeItemLocal = useCartStore((s) => s.removeItem); // ลบ (store จะยิง API ให้)
+  const cartCount = useCartStore((s) => s.cartCount());
+  const fetchCart = useCartStore((s) => s.fetchCart);
+  const setItemQtyLocal = useCartStore((s) => s.setItemQty);
+  const removeItemLocal = useCartStore((s) => s.removeItem);
 
   // ----- Auth -----
   const token = useAuthStore((s) => s.getToken());
@@ -37,14 +46,17 @@ export default function CartMui({ canCheckout, selectedAddress }) {
   const [loading, setLoading] = React.useState(true);
   const [updating, setUpdating] = React.useState({}); // { [id]: boolean }
 
-  const formatBaht = (n) => new Intl.NumberFormat("th-TH").format(n);
+  // ---- รูปจาก /image/ จับคู่ด้วย Product_ID ----
+  const [sellToPid, setSellToPid] = React.useState(new Map());
+  const [pidToImg, setPidToImg] = React.useState(new Map());
 
+  // โหลด cart
   React.useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         if (token) {
-          await fetchCart(); // ใช้เมธอดใน store ให้จัดการ API และ state
+          await fetchCart();
         }
       } finally {
         setLoading(false);
@@ -52,15 +64,79 @@ export default function CartMui({ canCheckout, selectedAddress }) {
     })();
   }, [token, fetchCart]);
 
-  // ----- Update quantity -----
-  const handleUpdateQuantity = async (sellId, newQty) => {
-    // ถ้ากด – แล้วเหลือ 0 => ลบทันที
-    if (newQty <= 0) {
-      return handleRemoveItem(sellId);
+  // เมื่อ cart (items) พร้อม -> โหลดแผนที่ Sell_ID -> Product_ID และโหลดรูป
+  React.useEffect(() => {
+    if (!items || items.length === 0) {
+      setSellToPid(new Map());
+      setPidToImg(new Map());
+      return;
     }
+
+    const ctl = new AbortController();
+    (async () => {
+      try {
+        // 1) โหลด products เพื่อทำ map Sell_ID -> Product_ID
+        const resProducts = await fetch(`${API_BASE}/store/products`, {
+          signal: ctl.signal,
+          headers: HDRS,
+        });
+        if (!resProducts.ok) throw new Error(`HTTP ${resProducts.status}`);
+        const rawProducts = await resProducts.json();
+        const list = Array.isArray(rawProducts)
+          ? rawProducts
+          : rawProducts?.items ?? [];
+
+        const mSellToPid = new Map();
+        for (const p of list) {
+          const sid = p.Sell_ID ?? p.sell_id ?? p.id;
+          const pid = p.Product_ID ?? p.product_id;
+          if (sid != null && pid != null) {
+            mSellToPid.set(String(sid), Number(pid));
+          }
+        }
+        setSellToPid(mSellToPid);
+
+        // 2) โหลดรูปทั้งหมด แล้วเก็บ productId -> รูปแรก
+        const resImages = await fetch(`${API_BASE}/image/`, {
+          signal: ctl.signal,
+          headers: HDRS,
+        });
+        if (!resImages.ok) throw new Error(`HTTP ${resImages.status}`);
+        const rawImages = await resImages.json();
+
+        const mPidToImg = new Map();
+        if (Array.isArray(rawImages)) {
+          // เลือกรูปแรกของแต่ละ Product_ID ก็พอ (ไม่สน cover ตามที่ขอ)
+          for (const r of rawImages) {
+            const pid = Number(r.Product_ID ?? r.product_id);
+            if (!Number.isFinite(pid)) continue;
+            if (!mPidToImg.has(pid)) {
+              mPidToImg.set(pid, imageURL(r.Img_Src || r.img_src));
+            }
+          }
+        }
+        setPidToImg(mPidToImg);
+      } catch (e) {
+        console.warn("load images for cart failed:", e);
+      }
+    })();
+
+    return () => ctl.abort();
+  }, [items]);
+
+  const getDisplayImage = (cartItem) => {
+    const sid = cartItem?.id;
+    const pid = sellToPid.get(String(sid));
+    const img = pid ? pidToImg.get(Number(pid)) : null;
+    return img || cartItem?.image || imgFallback;
+  };
+
+  const formatBaht = (n) => new Intl.NumberFormat("th-TH").format(n);
+
+  const handleUpdateQuantity = async (sellId, newQty) => {
+    if (newQty <= 0) return handleRemoveItem(sellId);
     setUpdating((p) => ({ ...p, [sellId]: true }));
     try {
-      // ให้ store จัดการ (ยิง API + อัปเดต state) — ไม่ต้องยิง API ซ้ำเอง
       await setItemQtyLocal(sellId, newQty);
     } catch (e) {
       alert(`อัปเดตไม่สำเร็จ: ${e.message}`);
@@ -74,35 +150,36 @@ export default function CartMui({ canCheckout, selectedAddress }) {
       alert("กรุณาเพิ่มและเลือกที่อยู่จัดส่งก่อนดำเนินการชำระเงิน");
       return;
     }
-    // ... logic เดิม เช่น navigate ไปหน้า Ordered
+
+    // คำนวณค่าส่ง
+    const shippingCost = calculateShippingCost(totalPrice);
+
+    // คำนวณยอดรวมทั้งหมด (รวมค่าส่ง)
+    const grandTotal = totalPrice + shippingCost;
+
+    // ส่งข้อมูลทั้งหมดไปยังหน้า ordered
     navigate("/ordered", {
       state: {
-        // ส่ง summary ที่หน้า Ordered ใช้ render ได้เลย
         items,
         subtotal: totalPrice,
-        shipping: 0,
-        paymentMethod: "Mobile Banking", // จะให้เปลี่ยนในหน้านี้ก็ได้
+        shipping: shippingCost, // ส่งค่าส่งไปที่หน้า ordered
+        grandTotal, // ส่งยอดรวมทั้งหมด
+        paymentMethod: "Mobile Banking",
         address: selectedAddress,
       },
     });
   };
 
-  // ----- Remove item (optimistic update) -----
   const handleRemoveItem = async (sellId) => {
     if (!confirm("ต้องการลบสินค้านี้ออกจากตะกร้าหรือไม่?")) return;
-
-    // Optimistic: เอาออกจากหน้าจอก่อน
     const prevItems = useCartStore.getState().items;
     useCartStore.setState({
       items: prevItems.filter((p) => String(p.id) !== String(sellId)),
     });
-
     setUpdating((p) => ({ ...p, [sellId]: true }));
     try {
-      // ให้ store ยิง API และ sync ภายใน (จะทำซ้ำกับ state ที่เราเพิ่งเอาออก แต่ไม่เป็นไร)
       await removeItemLocal(sellId);
     } catch (e) {
-      // Rollback ถ้า fail
       useCartStore.setState({ items: prevItems });
       alert(`ลบไม่สำเร็จ: ${e.message}`);
     } finally {
@@ -185,11 +262,11 @@ export default function CartMui({ canCheckout, selectedAddress }) {
             gap: 3,
           }}
         >
-          {/* รายการสินค้า */}
           <Stack spacing={2}>
             {items.map((it) => {
               const sellId = it.id;
               const qty = it.qty || 0;
+              const displayImg = getDisplayImage(it);
 
               return (
                 <Card key={sellId} sx={{ p: { xs: 1.5, md: 2.5 } }}>
@@ -205,11 +282,10 @@ export default function CartMui({ canCheckout, selectedAddress }) {
                       rowGap: 1.5,
                     }}
                   >
-                    {/* รูป */}
                     <Box sx={{ justifySelf: { md: "start" } }}>
                       <CardMedia
                         component="img"
-                        image={it.image || "/IMG1/bagG.png"}
+                        image={displayImg}
                         alt={it.name}
                         sx={{
                           width: 96,
@@ -218,13 +294,8 @@ export default function CartMui({ canCheckout, selectedAddress }) {
                           borderRadius: 1.2,
                           border: (t) => `1px solid ${t.palette.divider}`,
                         }}
-                        onError={(e) =>
-                          (e.currentTarget.src = "/IMG1/bagG.png")
-                        }
                       />
                     </Box>
-
-                    {/* ชื่อ + ราคา */}
                     <Box sx={{ minWidth: 0 }}>
                       <Typography
                         variant="subtitle1"
@@ -243,8 +314,6 @@ export default function CartMui({ canCheckout, selectedAddress }) {
                         ฿{formatBaht(it.price || 0)}
                       </Typography>
                     </Box>
-
-                    {/* ปรับจำนวน */}
                     <Box
                       sx={{
                         justifyContent: { md: "center" },
@@ -278,7 +347,6 @@ export default function CartMui({ canCheckout, selectedAddress }) {
                       </IconButton>
                     </Box>
 
-                    {/* ลบ */}
                     <Box sx={{ justifySelf: { md: "end" } }}>
                       <IconButton
                         color="error"
@@ -295,7 +363,6 @@ export default function CartMui({ canCheckout, selectedAddress }) {
             })}
           </Stack>
 
-          {/* สรุปคำสั่งซื้อ */}
           <Card
             sx={{ p: 3, position: "sticky", top: 20, height: "fit-content" }}
           >
@@ -312,7 +379,9 @@ export default function CartMui({ canCheckout, selectedAddress }) {
               </Box>
               <Box display="flex" justifyContent="space-between">
                 <Typography color="text.secondary">ค่าจัดส่ง</Typography>
-                <Typography color="success.main">ฟรี</Typography>
+                <Typography color="success.main">
+                  ฿{formatBaht(calculateShippingCost(totalPrice))}
+                </Typography>
               </Box>
               <Divider />
               <Box display="flex" justifyContent="space-between">
@@ -320,7 +389,7 @@ export default function CartMui({ canCheckout, selectedAddress }) {
                   ยอดรวมทั้งหมด
                 </Typography>
                 <Typography variant="h6" fontWeight={700} color="primary.main">
-                  ฿{formatBaht(totalPrice)}
+                  ฿{formatBaht(totalPrice + calculateShippingCost(totalPrice))}
                 </Typography>
               </Box>
             </Stack>

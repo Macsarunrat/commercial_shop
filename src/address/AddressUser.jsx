@@ -23,7 +23,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import { useAuthStore } from "../stores/authStore";
 import AppTheme from "../theme/AppTheme";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ---------------- helpers ---------------- */
@@ -166,6 +166,7 @@ function AddressFormDialog({ open, onClose, initial, onSubmit, busy }) {
             label="จังหวัด"
             value={form.Province}
             onChange={chg("Province")}
+            placeholder="กทม , พิษณุโลก"
           />
           <TextField
             label="รายละเอียดเพิ่มเติม"

@@ -1,5 +1,5 @@
 // src/cart/cartCon.jsx
-const API_BASE = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API_BASE = "https://ritzily-nebule-clark.ngrok-free.dev";
 const CART = `${API_BASE}/cart`;
 
 const NGROK_HDR = { "ngrok-skip-browser-warning": "true" };

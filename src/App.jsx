@@ -138,12 +138,9 @@
 import React, { useEffect } from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import Nav from "./nav/Nav";
-import OpenStore from "./component/OpenStore.jsx";
 import Home from "./component/Home.jsx";
-import Shop from "./component/Shop.jsx";
 import Login from "./userlogin/Login.jsx";
 import Cart from "./cart/Cart.jsx";
-import AllCategories2 from "./categorylayout/AllCategories2.jsx";
 import MoreAllCategories from "./categorylayout/MoreAllCategories.jsx";
 import CategoryShopId from "./categorylayout/CategoryShopId.jsx";
 import MainShopUI from "./shopui/MainShopUI.jsx";
@@ -159,12 +156,11 @@ import NewProductHome from "./homelayout/NewProductHome.jsx";
 import OpenShop from "./manageshop/OpenShop.jsx";
 import AddShopItem from "./manageshop/AddShopItem.jsx";
 import Myorder from "./manageshop/Myorder.jsx";
+import StoreShowUser from "./shopui/StoreShowUser.jsx";
 import ShopAddressCom from "./manageshop/AddressCom.jsx";
-
-import ProtectedRoute from "./nav/ProtectedRoute.jsx"; // ⬅️ เพิ่มอันนี้
+import ProtectedRoute from "./nav/ProtectedRoute.jsx"; //
 import { useAuthStore } from "./stores/authStore.jsx";
 import useCartStore from "./stores/cartStore";
-import Useimg from "./shopui/Useimg.jsx";
 
 const router = createBrowserRouter([
   {
@@ -176,10 +172,12 @@ const router = createBrowserRouter([
       { path: "categoryitems/:id", element: <CategoryShopId /> },
       { path: "allsh", element: <AllShopUI /> },
       { path: "mainshop/:sellId", element: <MainShopUI /> },
-      { path: "/shop/:shopId", element: <StoreShowUI /> },
+      { path: "/shopstore/:shopId", element: <StoreShowUI /> },
+      { path: "/shopuser/:shopId", element: <StoreShowUser /> },
       { path: "search", element: <SearchItem /> },
       { path: "help", element: <Help /> },
       { path: "allproducts", element: <NewProductHome /> },
+      { path: "5columncategories", element: <MoreAllCategories /> },
 
       // ---------- protected routes ----------
       {
@@ -201,13 +199,9 @@ const router = createBrowserRouter([
   { path: "register", element: <RegisterMain /> },
   { path: "login", element: <Login /> },
 
-  // ถ้า /cart เป็น public ก็ปล่อยไว้ข้างนอกได้
   { path: "cart", element: <Cart /> },
 
   { path: "/shopicon/:id", element: <ShopIcon /> },
-  { path: "5columncategories", element: <MoreAllCategories /> },
-
-  { path: "Addimg", element: <Useimg /> },
 ]);
 
 const App = () => {

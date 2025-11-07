@@ -1,4 +1,3 @@
-// src/category/CategoryById.jsx
 import * as React from "react";
 import {
   Box,
@@ -11,7 +10,7 @@ import {
 } from "@mui/material";
 import { Link } from "react-router-dom";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /** สร้าง query string จากออบเจกต์ โดยตัดค่าที่ว่าง/NaN/undefined ออก */
@@ -25,13 +24,22 @@ function buildQS(params) {
   return ent.length ? `?${new URLSearchParams(ent).toString()}` : "";
 }
 
+/** รวม path รูปให้เป็น URL เต็ม + แนบพารามิเตอร์ข้ามหน้าเตือนของ ngrok */
+function imageURL(path) {
+  if (!path) return "";
+  const url = new URL(path, API); // รองรับทั้ง absolute และ relative
+  url.searchParams.set("ngrok-skip-browser-warning", "true");
+  return url.toString();
+}
+
 /** map record จาก /store/products -> โครงกลาง (camelCase) */
 function normalizeSell(it) {
   const priceNum =
     Number(String(it.Price ?? it.price ?? "0").replace(/,/g, "")) || 0;
   return {
     sellId: it.Sell_ID ?? it.sell_id ?? null, // ใช้เป็นคีย์หลัก
-    productId: it.Product_ID ?? it.product_id ?? null, // อาจไม่มี
+    // รองรับทั้ง Product_ID / product_ID / product_id
+    productId: it.Product_ID ?? it.product_ID ?? it.product_id ?? null,
     shopId: it.Shop_ID ?? it.shop_id ?? null,
     categoryId: it.Category_ID ?? it.category_id ?? null,
     name: it.Product_Name ?? it.name ?? "Unnamed",
@@ -52,6 +60,10 @@ export default function CategoryById({ categoryId, brandId, q, sortKey }) {
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+
+  // เก็บรูปจาก /image/ แบบ group ต่อ productId
+  // โครง: Map<number, Array<{src, imgId, isCover, productName}>>
+  const [imgMap, setImgMap] = React.useState(new Map());
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -75,21 +87,64 @@ export default function CategoryById({ categoryId, brandId, q, sortKey }) {
         // ถ้าไม่มีพารามิเตอร์กรองเลย ไม่ต้องยิง API
         if (!qs) {
           setItems([]);
+          setImgMap(new Map());
           setLoading(false);
           return;
         }
 
-        const res = await fetch(`${API}/store/products${qs}`, {
-          signal: controller.signal,
-          headers: HDRS,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // ยิงพร้อมกันทั้งสินค้าและรูปภาพ
+        const [resProducts, resImages] = await Promise.all([
+          fetch(`${API}/store/products${qs}`, {
+            signal: controller.signal,
+            headers: HDRS, // fetch JSON ใส่ header ได้
+          }),
+          fetch(`${API}/image/`, {
+            signal: controller.signal,
+            headers: HDRS,
+          }),
+        ]);
 
-        const raw = await res.json();
-        let data = (Array.isArray(raw) ? raw : raw?.items ?? [])
+        if (!resProducts.ok) throw new Error(`HTTP ${resProducts.status}`);
+        if (!resImages.ok) throw new Error(`HTTP ${resImages.status}`);
+
+        const rawProducts = await resProducts.json();
+        const rawImages = await resImages.json();
+
+        // เตรียม imgMap: group ตาม Product_ID
+        const nextImgMap = new Map();
+        if (Array.isArray(rawImages)) {
+          for (const r of rawImages) {
+            const pid = Number(r.Product_ID ?? r.product_id);
+            if (!Number.isFinite(pid)) continue;
+            const arr = nextImgMap.get(pid) ?? [];
+            arr.push({
+              src: imageURL(r.Img_Src || r.img_src), // แนบ query ngrok
+              imgId: r.Img_ID ?? r.img_id ?? null,
+              isCover: Boolean(r.IsCover),
+              productName: r.product_name ?? null,
+            });
+            nextImgMap.set(pid, arr);
+          }
+        }
+        setImgMap(nextImgMap);
+
+        // สินค้า + กรองสต็อก + ผูกภาพ cover
+        let data = (
+          Array.isArray(rawProducts) ? rawProducts : rawProducts?.items ?? []
+        )
           .map(normalizeSell)
           .filter(Boolean)
-          .filter((it) => (it.stock ?? 0) > 0); // ✅ กรองสินค้าที่สต็อกหมด
+          .filter((it) => (it.stock ?? 0) > 0)
+          .map((p) => {
+            const imgs = nextImgMap.get(Number(p.productId)) ?? [];
+            const preferred = imgs.find((x) => x.isCover) ?? imgs[0];
+            return {
+              ...p,
+              image: preferred?.src || p.image, // ใช้รูป cover/แรก ถ้ามี
+              _imagesAll: imgs, // ส่งไปหน้า detail ได้
+              _imagePreferred: preferred?.src || null,
+            };
+          });
 
         if (sortKey === "priceAsc") data.sort((a, b) => a.price - b.price);
         if (sortKey === "priceDesc") data.sort((a, b) => b.price - a.price);
@@ -99,6 +154,7 @@ export default function CategoryById({ categoryId, brandId, q, sortKey }) {
         if (e.name !== "AbortError") {
           setError(e.message || "Fetch failed");
           setItems([]);
+          setImgMap(new Map());
         }
       } finally {
         setLoading(false);
@@ -139,12 +195,17 @@ export default function CategoryById({ categoryId, brandId, q, sortKey }) {
     >
       {items.map((p) => {
         // ลิงก์ไปหน้า detail โดยใช้ sellId เป็นหลัก และแนบทั้ง sid/pid ผ่าน search + state
+        // แนบภาพที่เลือก + ลิสต์ภาพทั้งหมดของสินค้านั้นไปด้วย
         const toProduct = {
           pathname: `/mainshop/${p.sellId}`,
           search: `?sid=${encodeURIComponent(p.sellId)}${
             p.productId ? `&pid=${encodeURIComponent(p.productId)}` : ""
           }`,
-          state: { sellId: p.sellId, productId: p.productId },
+          state: {
+            sellId: p.sellId,
+            productId: p.productId,
+            image: p._imagePreferred, // ภาพหลัก
+          },
         };
 
         return (
@@ -160,10 +221,11 @@ export default function CategoryById({ categoryId, brandId, q, sortKey }) {
             <CardActionArea component={Link} to={toProduct}>
               <CardMedia
                 component="img"
-                src={p.image}
+                src={p._imagePreferred}
                 alt={p.name}
                 sx={{ height: 180, objectFit: "cover" }}
                 loading="lazy"
+                // ถ้ารูปจาก ngrok ล่ม ให้ตกไปที่รูป placeholder
                 onError={(e) => (e.currentTarget.src = "/IMG1/bagG.png")}
               />
               <CardContent sx={{ py: 1.5 }}>

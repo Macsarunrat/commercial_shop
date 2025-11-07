@@ -1,19 +1,19 @@
-import * as React from "react";
-
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import Box from "@mui/material/Box";
-import AppTheme from "../theme/AppTheme";
-import Card from "@mui/material/Card";
-import Skeleton from "@mui/material/Skeleton";
-import CardMedia from "@mui/material/CardMedia";
-import CardContent from "@mui/material/CardContent";
-import Stack from "@mui/material/Stack";
-import { Link } from "react-router-dom";
-
 // src/shopui/ShopIcon.jsx
+import * as React from "react";
+import {
+  Box,
+  Card,
+  CardContent,
+  Stack,
+  Typography,
+  Button,
+  Skeleton,
+  Avatar,
+} from "@mui/material";
+import { Link } from "react-router-dom";
+import AppTheme from "../theme/AppTheme";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ---------- helpers ---------- */
@@ -21,10 +21,39 @@ function normalizeShop(s) {
   if (!s) return null;
   return {
     shopId: s.Shop_ID ?? s.shop_id ?? s.id ?? null,
-    name: s.Shop_Name,
-    phone: s.Shop_Phone,
-    image: s.Cover_Image ?? s.image ?? "/IMG1/bagG.png",
+    name: s.Shop_Name ?? s.shop_name ?? s.name ?? "Unnamed Shop",
+    phone: s.Shop_Phone ?? s.phone ?? "-",
   };
+}
+
+function getFirstLetter(name) {
+  const ch =
+    String(name || "")
+      .trim()
+      .charAt(0) || "?";
+  return ch.toUpperCase();
+}
+
+/** Avatar ตัวอักษรพื้นหลัง primary.main */
+function LetterAvatar({ name, size = 72 }) {
+  const letter = getFirstLetter(name);
+  return (
+    <Avatar
+      alt={name}
+      sx={{
+        width: size,
+        height: size,
+        bgcolor: "#f5f5f5",
+        color: "black",
+        fontWeight: 800,
+        fontSize: size * 0.48,
+        borderRadius: 1.5,
+        border: (t) => `1px solid ${t.palette.divider}`,
+      }}
+    >
+      {letter}
+    </Avatar>
+  );
 }
 
 export default function ShopIcon({ shopId }) {
@@ -44,49 +73,19 @@ export default function ShopIcon({ shopId }) {
       setLoading(true);
       setErr(null);
       try {
-        // พยายามเรียกแบบเจาะไอดีก่อน
-        const candidates = [`${API}/store/shops`];
+        // ใช้ /store/shops แล้วกรองเอา shopId ที่ต้องการ
+        const res = await fetch(`${API}/store/shops`, {
+          headers: HDRS,
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        let found = null;
-        for (const url of candidates) {
-          try {
-            const res = await fetch(url, {
-              headers: HDRS,
-              signal: controller.signal,
-            });
-            if (!res.ok) continue;
-            const raw = await res.json();
-
-            if (Array.isArray(raw)) {
-              const hit = raw.find(
-                (x) => String(x.Shop_ID ?? x.shop_id ?? x.id) === String(shopId)
-              );
-              if (hit) {
-                found = normalizeShop(hit);
-                break;
-              }
-            } else if (raw?.items && Array.isArray(raw.items)) {
-              const hit = raw.items.find(
-                (x) => String(x.Shop_ID ?? x.shop_id ?? x.id) === String(shopId)
-              );
-              if (hit) {
-                found = normalizeShop(hit);
-                break;
-              }
-            } else {
-              // รูปแบบเป็นร้านเดียว
-              const one = normalizeShop(raw);
-              if (one?.shopId && String(one.shopId) === String(shopId)) {
-                found = one;
-                break;
-              }
-            }
-          } catch {
-            // ลองตัวถัดไป
-          }
-        }
-
-        setShop(found);
+        const raw = await res.json();
+        const arr = Array.isArray(raw) ? raw : raw?.items ?? [];
+        const hit = arr.find(
+          (x) => String(x.Shop_ID ?? x.shop_id ?? x.id) === String(shopId)
+        );
+        setShop(normalizeShop(hit));
       } catch (e) {
         if (e.name !== "AbortError") setErr(e);
       } finally {
@@ -131,38 +130,23 @@ export default function ShopIcon({ shopId }) {
         }}
         variant="outlined"
       >
-        <CardMedia
-          component="img"
-          image={shop.image}
-          alt={shop.name}
-          sx={{
-            width: { xs: 60, md: 72 },
-            height: { xs: 60, md: 72 },
-            objectFit: "cover",
-            borderRadius: 1.5,
-            border: (t) => `1px solid ${t.palette.divider}`,
-          }}
-          onError={(e) => (e.currentTarget.src = "/IMG1/bagG.png")}
-        />
+        {/* ไอคอนตัวอักษรตามชื่อร้าน */}
+        <LetterAvatar name={shop.name} size={72} />
 
         <CardContent sx={{ p: 0, minWidth: 0 }}>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, alignItems: "center" }}
-            noWrap
-          >
+          <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
             {shop.name}
           </Typography>
         </CardContent>
 
-        {/* ขวาสุด: จัดตำแหน่งแนวนอน + เพิ่มช่องว่าง */}
+        {/* ส่วนขวา */}
         <CardContent
           sx={{ p: 3, display: { xs: "none", md: "block" }, ml: "auto" }}
         >
           <Stack
             direction="row"
-            spacing={1} // ปรับค่าตรงนี้เพื่อเพิ่ม/ลดความห่าง
-            alignItems="baseline" // ให้ตัวหนังสืออยู่แนวฐานเดียวกัน
+            spacing={1}
+            alignItems="baseline"
             justifyContent="flex-end"
           >
             <Stack
@@ -194,7 +178,7 @@ export default function ShopIcon({ shopId }) {
             <Button
               variant="outlined"
               component={Link}
-              to={`/shop/${shop.shopId}`}
+              to={`/shopuser/${shop.shopId}`}
             >
               VIEW SHOP
             </Button>

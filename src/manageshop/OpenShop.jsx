@@ -24,7 +24,7 @@ import {
 } from "../address/AddressShop";
 
 /* -------- base fetch helpers (โปรไฟล์ร้าน) -------- */
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 const authHeaders = (token, extra = {}) => ({
@@ -307,7 +307,7 @@ export default function OpenStore() {
                     onClick={() => {
                       const sid = profile?.Shop_ID ?? profile?.shop_id;
                       if (!sid) return alert("ไม่พบ Shop ID");
-                      navigate(`/shop/${sid}`); // ➜ ไปหน้า StoreShowUI โดยส่ง shopId
+                      navigate(`/shopstore/${sid}`); // ➜ ไปหน้า StoreShowUI โดยส่ง shopId
                     }}
                   >
                     ดูสินค้าในร้านทั้งหมด

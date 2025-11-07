@@ -16,7 +16,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import AppTheme from "../../theme/AppTheme";
 
-const API = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API = "https://ritzily-nebule-clark.ngrok-free.dev";
 const HDRS = { "ngrok-skip-browser-warning": "true" };
 
 /* ---------------- helpers ---------------- */
@@ -43,15 +43,6 @@ async function readNiceError(res) {
   } catch {}
   return `HTTP ${res.status}`;
 }
-// async function fjson(input, init) {
-//   const res = await fetch(input, init);
-//   if (!res.ok) throw new Error(await readNiceError(res));
-//   try {
-//     return await res.json();
-//   } catch {
-//     return null;
-//   }
-// }
 
 /* ---------------- component ---------------- */
 export default function Bar() {
@@ -80,6 +71,12 @@ export default function Bar() {
     typeof window !== "undefined"
       ? localStorage.getItem("navMode") || "buyer"
       : "buyer"
+  );
+
+  const [shopitem, setshopitem] = React.useState(
+    typeof window !== "undefined"
+      ? localStorage.getItem("navMode") || "MY-SHOP"
+      : "MY-SHOP"
   );
 
   // หลัง login ลองเช็คว่ามีร้านไหม (เก็บสถานะไว้เฉย ๆ ไม่เอามาใช้บังเมนูอีก)
@@ -178,7 +175,16 @@ export default function Bar() {
         <Container maxWidth="xl">
           <Toolbar>
             {/* Mobile: hamburger */}
-            <Box sx={{ display: { xs: "flex", md: "none" } }}>
+            <Box
+              sx={{
+                display: {
+                  xs: "flex",
+                  md: "none",
+                  fontFamily: "Inter",
+                  fontSize: 16,
+                },
+              }}
+            >
               <IconButton
                 size="large"
                 aria-label="open navigation"

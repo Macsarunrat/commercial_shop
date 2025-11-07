@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "./stores/authStore.jsx";
 
-const API_URL = "https://great-lobster-rightly.ngrok-free.app";
+const API_URL = "https://ritzily-nebule-clark.ngrok-free.dev";
 
 const api = axios.create({
   baseURL: API_URL,

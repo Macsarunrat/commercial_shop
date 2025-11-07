@@ -3,15 +3,6 @@ import * as React from "react";
 import { Button, Menu, MenuItem } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
-/**
- * Props:
- * - value: "priceAsc" | "priceDesc" | null   // ค่าปัจจุบัน (controlled)
- * - onChange: (val) => void                  // ส่งค่าเมื่อผู้ใช้เลือก
- * - label: string                            // ป้ายบนปุ่ม (default: "Sort by")
- * - disabled: boolean                        // ปิดปุ่มได้
- * - size: "small" | "medium" | "large"       // ขนาดปุ่ม
- * - fullWidth: boolean                       // ยืดเต็มความกว้างหรือไม่
- */
 export default function SortButtonList({
   value = null,
   onChange,

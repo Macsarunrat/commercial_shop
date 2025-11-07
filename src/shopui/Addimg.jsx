@@ -1,4 +1,4 @@
-// src/image/UploadImage.jsx
+// src/admin/Addimg.jsx
 import * as React from "react";
 import {
   Button,
@@ -9,20 +9,14 @@ import {
   TextField,
   Stack,
   Alert,
-  FormControlLabel,
-  Checkbox,
   CircularProgress,
 } from "@mui/material";
 import { useAuthStore } from "../stores/authStore";
 
-/** ====== CONFIG ====== */
-const API_BASE = "https://unsparingly-proextension-jacque.ngrok-free.dev";
+const API_BASE = "https://ritzily-nebule-clark.ngrok-free.dev";
 const NGROK_HDR = { "ngrok-skip-browser-warning": "true" };
+const FILE_FIELD_NAME = "file";
 
-// ถ้าแบ็กเอนด์ “บังคับให้เป็น .png เท่านั้น” ให้ตั้งเป็น true
-const PNG_ONLY = false;
-
-/** ====== HELPERS ====== */
 function isHttpUrl(s) {
   try {
     const u = new URL(String(s));
@@ -32,46 +26,29 @@ function isHttpUrl(s) {
   }
 }
 
-/** ดาวน์โหลดรูปจาก URL -> แปลงเป็น File (ทำในเบราว์เซอร์)
- * หมายเหตุ: จะล้มเหลวถ้าโดเมนปลายทางไม่เปิด CORS หรือกัน hotlink
- */
-async function fetchToFile(url, namePrefix = "image") {
+async function fetchToFile(url, name = "image") {
   const res = await fetch(url, { mode: "cors" });
   if (!res.ok) throw new Error(`ดาวน์โหลดไม่ได้ (${res.status}) : ${url}`);
-
   const ctype = (res.headers.get("content-type") || "").split(";")[0].trim();
-  if (!/^image\//i.test(ctype)) {
+  if (!/^image\//i.test(ctype))
     throw new Error(`ไม่ใช่ไฟล์รูป (${ctype}) : ${url}`);
-  }
-  if (PNG_ONLY && ctype !== "image/png") {
-    throw new Error(`ต้องเป็น .png เท่านั้น : ${url}`);
-  }
-
   const blob = await res.blob();
   const ext = blob.type?.includes("/") ? `.${blob.type.split("/")[1]}` : ".png";
-  return new File([blob], `${namePrefix}${ext}`, {
-    type: blob.type || "image/png",
-  });
+  return new File([blob], `${name}${ext}`, { type: blob.type || "image/png" });
 }
 
-/** POST รูปหลายไฟล์ในครั้งเดียวไปที่ /image/products/{product_id}
- * ชื่อ field = "files" (ตามสเปค)
- */
-async function postImages(productId, files, token) {
+async function postSingleImage(productId, file, token) {
   const fd = new FormData();
-  for (const f of files) fd.append("files", f);
-
-  const res = await fetch(`${API_BASE}/image/products/${productId}`, {
+  fd.append(FILE_FIELD_NAME, file);
+  const res = await fetch(`${API_BASE}/image/product/${productId}`, {
     method: "POST",
     headers: {
       ...NGROK_HDR,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      // อย่าตั้ง Content-Type เอง ปล่อยให้ browser ใส่ boundary
     },
     body: fd,
     credentials: "include",
   });
-
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
@@ -79,114 +56,77 @@ async function postImages(productId, files, token) {
     } catch {}
     throw new Error(msg);
   }
-  return res.json().catch(() => ({}));
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
 }
 
-/** ====== COMPONENT ====== */
-export default function UploadImage({ onUploaded }) {
-  const token = useAuthStore((s) => s.getToken());
+/**
+ * Addimg
+ * - ถ้าไม่ส่ง prop open → ใช้ปุ่มภายในเปิด dialog เอง (uncontrolled)
+ * - ถ้าส่ง prop open/onClose → ใช้เป็น dialog ควบคุมจากภายนอก (controlled)
+ * - hideTrigger: ซ่อนปุ่มหลัก (ไว้ใช้ตอน controlled)
+ */
+export default function Addimg({
+  open,
+  onClose,
+  defaultProductId,
+  hideTrigger = false,
+  buttonText = "เพิ่มรูปจาก URL",
+  onUploaded,
+}) {
+  const token = useAuthStore((s) => s.getToken?.());
 
-  const [open, setOpen] = React.useState(false);
-  const [productId, setProductId] = React.useState("");
-  const [urls, setUrls] = React.useState("");
-  const [makeCover, setMakeCover] = React.useState(true); // ใช้กำหนดชื่อไฟล์/ลำดับฝั่ง client
+  const [innerOpen, setInnerOpen] = React.useState(false);
+  const controlled = open !== undefined;
+
+  const [productId, setProductId] = React.useState(defaultProductId ?? "");
+  const [url, setUrl] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [success, setSuccess] = React.useState(null);
 
-  const resetForm = () => {
-    setProductId("");
-    setUrls("");
-    setMakeCover(true);
+  React.useEffect(() => {
+    if (defaultProductId !== undefined) setProductId(defaultProductId ?? "");
+  }, [defaultProductId]);
+
+  const actuallyOpen = controlled ? open : innerOpen;
+  const doOpen = () => {
+    if (!controlled) setInnerOpen(true);
+  };
+  const doClose = () => {
+    if (controlled) onClose?.();
+    else setInnerOpen(false);
+  };
+
+  const resetMsgs = () => {
     setError(null);
     setSuccess(null);
   };
 
-  const handleOpen = () => {
-    resetForm();
-    setOpen(true);
-  };
-  const handleClose = () => {
-    if (!busy) setOpen(false);
-  };
-
-  const doUpload = async () => {
-    setError(null);
-    setSuccess(null);
-
+  const handleUpload = async () => {
+    resetMsgs();
     const pid = Number(productId);
     if (!Number.isInteger(pid) || pid <= 0) {
       setError("กรุณากรอก Product_ID เป็นจำนวนเต็มบวก");
       return;
     }
-
-    const list = urls
-      .split(/\r?\n|,/) // รองรับขึ้นบรรทัด/คอมมา
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    if (list.length === 0) {
-      setError("กรุณาใส่ URL รูปอย่างน้อย 1 รูป (บรรทัดละ 1 URL)");
+    if (!isHttpUrl(url)) {
+      setError("กรุณาใส่ URL ที่ขึ้นต้นด้วย http/https");
       return;
     }
-
-    const invalid = list.filter((u) => !isHttpUrl(u));
-    if (invalid.length) {
-      setError(
-        `พบ URL ไม่ถูกต้อง:\n- ${invalid.slice(0, 3).join("\n- ")}${
-          invalid.length > 3 ? "\n..." : ""
-        }`
-      );
-      return;
-    }
-
     try {
       setBusy(true);
-
-      // 1) แปลงทุก URL เป็น File (บางตัวอาจดาวน์โหลดไม่ได้ → เก็บเป็น failed)
-      const files = [];
-      const failed = [];
-      for (let i = 0; i < list.length; i++) {
-        const u = list[i];
-        try {
-          const file = await fetchToFile(
-            u,
-            i === 0 && makeCover ? "cover" : `image_${i + 1}`
-          );
-          files.push(file);
-        } catch (e) {
-          failed.push(`- ${u} (${e.message})`);
-        }
-      }
-
-      if (files.length === 0) {
-        setError(
-          failed.length
-            ? `ดาวน์โหลดรูปไม่สำเร็จทั้งหมด:\n${failed.slice(0, 6).join("\n")}${
-                failed.length > 6 ? "\n..." : ""
-              }`
-            : "ไม่พบไฟล์รูปที่อัปโหลดได้"
-        );
-        return;
-      }
-
-      // 2) POST ครั้งเดียวด้วย multipart/form-data
-      const resp = await postImages(pid, files, token);
-
-      let msg = `อัปโหลดสำเร็จ ${files.length} ไฟล์ 🎉`;
-      if (failed.length) {
-        msg += `\n(มีบางรูปพลาด)\n${failed.slice(0, 3).join("\n")}${
-          failed.length > 3 ? "\n..." : ""
-        }`;
-      }
-      setSuccess(msg);
-      onUploaded?.({ productId: pid, uploaded: files.length, failed, resp });
+      const file = await fetchToFile(url, "cover");
+      await postSingleImage(pid, file, token);
+      setSuccess(`อัปโหลดสำเร็จให้ Product_ID = ${pid}`);
+      onUploaded?.({ productId: pid, url });
     } catch (e) {
       const m = String(e?.message || e);
       if (/CORS|Failed to fetch/i.test(m)) {
-        setError(
-          "โหลดรูปจาก URL ไม่ได้เพราะ CORS/กัน hotlink ของเว็บปลายทาง (ลองใช้ URL ที่อนุญาตให้ดึงข้ามโดเมน หรือดาวน์โหลดมาเครื่องก่อน)"
-        );
+        setError("ดาวน์โหลดรูปจาก URL ไม่ได้ (อาจติด CORS/hotlink ที่ปลายทาง)");
       } else {
         setError(m);
       }
@@ -197,12 +137,14 @@ export default function UploadImage({ onUploaded }) {
 
   return (
     <>
-      <Button variant="outlined" onClick={handleOpen}>
-        เพิ่มรูปจาก URL
-      </Button>
+      {!hideTrigger && (
+        <Button variant="outlined" onClick={doOpen}>
+          {buttonText}
+        </Button>
+      )}
 
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-        <DialogTitle>อัปโหลดรูปจาก URL</DialogTitle>
+      <Dialog open={!!actuallyOpen} onClose={doClose} fullWidth maxWidth="sm">
+        <DialogTitle>อัปโหลดรูปทีละ URL</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
             {error && (
@@ -215,7 +157,6 @@ export default function UploadImage({ onUploaded }) {
                 {success}
               </Alert>
             )}
-
             <TextField
               label="Product_ID"
               value={productId}
@@ -225,50 +166,27 @@ export default function UploadImage({ onUploaded }) {
               disabled={busy}
               required
             />
-
             <TextField
-              label="URL ของรูป (บรรทัดละ 1 URL หรือคั่นด้วย , )"
-              value={urls}
-              onChange={(e) => setUrls(e.target.value)}
-              multiline
-              minRows={6}
+              label="URL ของรูป"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://.../image.png"
               fullWidth
               disabled={busy}
-              placeholder={`https://.../image1.png\nhttps://.../image2.jpg`}
+              required
             />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={makeCover}
-                  onChange={(e) => setMakeCover(e.target.checked)}
-                  disabled={busy}
-                />
-              }
-              label="ใช้รูปแรกเป็นหน้าปก (จัดลำดับเองฝั่งเว็บ)"
-            />
-
-            {PNG_ONLY && (
-              <Alert severity="info">
-                โหมดบังคับไฟล์ PNG เท่านั้น (PNG_ONLY = true)
-              </Alert>
-            )}
-            <Alert severity="warning">
-              ถ้าโดเมนปลายทางไม่เปิด CORS หรือกัน hotlink
-              เบราว์เซอร์จะดาวน์โหลดรูปนั้นไม่ได้และจะถูกข้าม
-            </Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={busy}>
+          <Button onClick={doClose} disabled={busy}>
             ปิด
           </Button>
           <Button
-            onClick={doUpload}
+            onClick={handleUpload}
             variant="contained"
             disabled={busy}
             startIcon={
-              busy ? <CircularProgress color="inherit" size={18} /> : null
+              busy ? <CircularProgress size={18} color="inherit" /> : null
             }
           >
             {busy ? "กำลังอัปโหลด..." : "อัปโหลด"}

@@ -58,7 +58,9 @@ export default function SearchAppBar() {
   const location = useLocation();
 
   // จำนวนสินค้าในตะกร้า
-  const cartCount = useCartStore((s) => s.cartCount());
+  const cartCount = useCartStore((s) =>
+    s.items.reduce((n, it) => n + (it.qty || 0), 0)
+  );
 
   // state ช่องค้นหา
   const [q, setQ] = React.useState("");
